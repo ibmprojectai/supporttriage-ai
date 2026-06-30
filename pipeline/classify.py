@@ -1,40 +1,43 @@
 """Pipeline stage 1 — classify a support ticket.
 
-Sets ticket.category and ticket.priority using an IBM Granite LLM chain.
-Falls back to stub values when watsonx credentials are absent.
+Sets ticket.category and ticket.priority.
+
+Live mode:  calls IBM Granite via the native ibm-watsonx-ai ModelInference SDK.
+Stub mode:  sets deterministic placeholder values when credentials are absent.
 """
 
 from __future__ import annotations
 
 import re
 
-from langchain_core.prompts import PromptTemplate
-
 from models import Ticket
-from watsonx_config import get_llm
+from watsonx_config import get_model
 
-_PROMPT = PromptTemplate(
-    input_variables=["subject", "body"],
-    template="""You are a support-ticket classifier. Given the ticket below, respond with
-exactly two lines in this format:
-CATEGORY: <one of: authentication, billing, performance, data-loss, feature-request, other>
-PRIORITY: <one of: critical, high, medium, low>
-
-Subject: {subject}
-Body: {body}
-
-Respond with only the two lines above — no extra text.""",
+_SYSTEM = (
+    "You are a support-ticket classifier. "
+    "Respond with exactly two lines and nothing else:\n"
+    "CATEGORY: <one of: authentication, billing, performance, data-loss, feature-request, other>\n"
+    "PRIORITY: <one of: critical, high, medium, low>"
 )
+
+
+def _build_prompt(ticket: Ticket) -> str:
+    return (
+        f"Subject: {ticket.subject}\n"
+        f"Body:\n{ticket.body}\n\n"
+        "Classify this ticket."
+    )
 
 
 def classify(ticket: Ticket) -> Ticket:
     """Classify *ticket*, setting ``category`` and ``priority``.
 
-    Uses the Granite foundation model via WatsonxLLM.  If credentials are absent,
-    returns the ticket unchanged (stub mode) after printing a warning.
+    Uses IBM Granite (ibm/granite-3-8b-instruct) via the ibm-watsonx-ai SDK.
+    Falls back to stub values when credentials are absent.
     """
-    llm = get_llm()
-    if llm is None:
+    model = get_model()
+
+    if model is None:
         print(
             "[classify] STUB MODE — watsonx credentials not found. "
             "Setting placeholder category/priority."
@@ -43,13 +46,18 @@ def classify(ticket: Ticket) -> Ticket:
         ticket.priority = "high"
         return ticket
 
-    chain = _PROMPT | llm
-    response: str = chain.invoke({"subject": ticket.subject, "body": ticket.body})
+    prompt = f"{_SYSTEM}\n\n{_build_prompt(ticket)}"
+    response: str = model.generate_text(prompt=prompt)
 
     category_match = re.search(r"CATEGORY:\s*(.+)", response, re.IGNORECASE)
     priority_match = re.search(r"PRIORITY:\s*(.+)", response, re.IGNORECASE)
 
-    ticket.category = category_match.group(1).strip().lower() if category_match else "other"
-    ticket.priority = priority_match.group(1).strip().lower() if priority_match else "medium"
+    ticket.category = (
+        category_match.group(1).strip().lower() if category_match else "other"
+    )
+    ticket.priority = (
+        priority_match.group(1).strip().lower() if priority_match else "medium"
+    )
 
+    print(f"[classify] category={ticket.category!r}  priority={ticket.priority!r}")
     return ticket
