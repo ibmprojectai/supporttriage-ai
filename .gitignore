@@ -1,0 +1,32 @@
+# Secrets — never commit
+.env
+
+# ChromaDB local vector store
+.chromadb/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# Hugging Face / ONNX model cache (downloaded by ChromaDB at runtime)
+.cache/
