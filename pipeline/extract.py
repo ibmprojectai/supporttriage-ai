@@ -15,7 +15,6 @@ import logging
 import re
 import time
 
-from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import PromptTemplate
 
 from models import Ticket
@@ -44,18 +43,22 @@ _ERR_RE = re.compile(r"\bERR-\d+\b")
 _ACC_RE = re.compile(r"\bACC-\d+\b")
 
 
-def _repair_json(raw: object) -> str:
-    """Strip markdown fences and common LLM JSON noise.
+def _to_str(raw: object) -> str:
+    """Convert any LangChain response object to a plain str.
 
-    Accepts any object (str, AIMessage, etc.) and always returns a plain str,
-    so the function is safe regardless of which LangChain backend is in use.
+    Works with: plain str, AIMessage, BaseMessage, or anything else.
+    This is the single point where type coercion happens — called immediately
+    after ainvoke() before any other processing.
     """
-    # Unwrap AIMessage / BaseMessage objects from any LangChain backend
+    if isinstance(raw, str):
+        return raw
     if hasattr(raw, "content"):
-        text = str(raw.content)
-    else:
-        text = str(raw)
+        return str(raw.content)
+    return str(raw)
 
+
+def _repair_json(text: str) -> str:
+    """Strip markdown fences and common LLM JSON noise from a plain str."""
     # Remove ```json ... ``` or ``` ... ```
     clean = re.sub(r"```(?:json)?", "", text).strip().rstrip("`").strip()
     # Strip any leading prose before the first '{'
@@ -80,11 +83,20 @@ async def extract(ticket: Ticket) -> Ticket:
         ticket.confidence_extract = 0.0
         return ticket
 
-    chain = _PROMPT | llm | StrOutputParser()
+    # Build the prompt string from the template
+    prompt_text: str = _PROMPT.format(body=ticket.body)
 
+    # Invoke the LLM — use ainvoke if available, otherwise fall back to
+    # asyncio.to_thread so the sync path never blocks the event loop
     t0 = time.perf_counter()
-    response: str = await chain.ainvoke({"body": ticket.body})
+    try:
+        raw = await llm.ainvoke(prompt_text)
+    except (AttributeError, NotImplementedError):
+        raw = await asyncio.to_thread(llm.invoke, prompt_text)
     elapsed = time.perf_counter() - t0
+
+    # Coerce to str immediately — handles AIMessage, str, or anything else
+    response: str = _to_str(raw)
 
     try:
         clean = _repair_json(response)
@@ -103,8 +115,7 @@ async def extract(ticket: Ticket) -> Ticket:
 
     except json.JSONDecodeError:
         log.error(
-            "[extract] JSON parse failed after repair — falling back to regex. raw=%r",
-            response,
+            "[extract] JSON parse failed — falling back to regex. raw=%r", response,
         )
         print(f"[extract] JSON parse failed — falling back to regex. Response was: {response!r}")
         ticket.error_codes = _ERR_RE.findall(ticket.body)
