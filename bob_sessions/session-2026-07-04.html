@@ -77,6 +77,7 @@
     <tr><td>Standalone customer web form (ui/web_form.py), SMTP ticket sending, IMAP [SUPPORT-TICKET] filter</td><td><span class="tag tag-done">✅ Done</span></td></tr>
     <tr><td>Fix raw HTML rendering: escape ticket fields, replace split divs with st.container, escape log</td><td><span class="tag tag-done">✅ Done</span></td></tr>
     <tr><td>Fix inbox card newline fragmentation: collapse body newlines before preview injection</td><td><span class="tag tag-done">✅ Done</span></td></tr>
+    <tr><td>Fix ALL 6 multiline st.markdown HTML blocks (no more raw tag leaking) + IMAP mark-as-read</td><td><span class="tag tag-done">✅ Done</span></td></tr>
   </table>
 
   <!-- TASKS -->
@@ -289,6 +290,19 @@
   </div>
 
   <div class="task">
+    <div class="task-title">32. Fix All Multiline HTML Blocks + IMAP Mark-as-Read <span class="tag tag-done">Done</span></div>
+    <ul>
+      <li><strong>Root cause (definitive):</strong> every <code>st.markdown(f"""...&lt;/div&gt;...""")</code> call is vulnerable — Streamlit's markdown renderer splits the string at every <code>\n</code>, fragmenting the HTML and leaking closing tags as visible text. This was not just the inbox card — there were 6 affected locations.</li>
+      <li><strong>Fix pattern:</strong> converted all 6 blocks to Python string concatenation with <code>.format()</code> — the HTML value is always a single unbroken string with no embedded newlines. Conditional values (dot colour, label text) are computed into variables first, then injected via named <code>.format()</code> keys.</li>
+      <li><strong>Locations fixed:</strong> sidebar channel status (line 292), sidebar queue stats (line 329), inbox ticket card (line 601), dashboard confidence gauge (line 723), outage critical banner (line 785), outage warning banner (line 797).</li>
+      <li><strong>IMAP mark-as-read:</strong> added <code>mail.store(mid, "+FLAGS", "\\Seen")</code> after each email fetch in <code>intake/channels.py</code> — previously clicking "Fetch Gmail" would re-import the same unread emails on every click.</li>
+      <li><strong>Telegram bot confirmed live:</strong> <code>@Triage_Demo_Bot</code> (id 8901148909) — <code>getMe</code> returns <code>ok: true</code>. Token wired into Settings page.</li>
+      <li>64/64 tests passing — 0 regressions.</li>
+      <li>commit <code>e717ea4</code></li>
+    </ul>
+  </div>
+
+  <div class="task">
     <div class="task-title">31. Fix Inbox Card Newline Fragmentation <span class="tag tag-done">Done</span></div>
     <ul>
       <li><strong>Root cause:</strong> ticket body text contains <code>\n</code> newline characters. When injected into the f-string HTML card, Streamlit's markdown renderer splits the HTML at those newlines, breaking the tag structure. The closing <code>&lt;/div&gt;</code> was rendered as literal text on screen between cards, and each newline-split fragment appeared as a raw HTML snippet.</li>
@@ -421,6 +435,12 @@
 
   <!-- GIT LOG -->
   <h2>Git Commit History</h2>
+
+  <div class="commit">
+    <span class="commit-hash">e717ea4</span> <span class="commit-date">· 2026-07-04 18:00</span>
+    <div class="commit-msg">Fix all multiline HTML st.markdown blocks + mark IMAP emails read after fetch</div>
+    <div class="commit-files">ui/review_app.py · intake/channels.py — 121 insertions, 92 deletions</div>
+  </div>
 
   <div class="commit">
     <span class="commit-hash">30f5456</span> <span class="commit-date">· 2026-07-04 17:00</span>
