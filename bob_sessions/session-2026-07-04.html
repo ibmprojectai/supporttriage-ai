@@ -57,6 +57,7 @@
     <tr><td>Fix extract.py — proper fix with StrOutputParser</td><td><span class="tag tag-done">✅ Done</span></td></tr>
     <tr><td>Fix extract.py — harden _repair_json (Streamlit Cloud Python 3.14)</td><td><span class="tag tag-done">✅ Done</span></td></tr>
     <tr><td>Fix extract.py — final: drop chain, call llm.ainvoke() directly</td><td><span class="tag tag-done">✅ Done</span></td></tr>
+    <tr><td>Fix extract.py — definitive: remove LangChain, use get_model() directly</td><td><span class="tag tag-done">✅ Done</span></td></tr>
     <tr><td>All changes pushed to GitHub</td><td><span class="tag tag-done">✅ Done</span></td></tr>
   </table>
 
@@ -196,8 +197,32 @@
     </ul>
   </div>
 
+  <div class="task">
+    <div class="task-title">13. Fix extract.py — definitive rewrite: remove LangChain entirely, use get_model() directly <span class="tag tag-done">Done</span></div>
+    <ul>
+      <li><strong>Root cause (final):</strong> even <code>llm.ainvoke()</code> and <code>_to_str()</code> remained fragile because <code>get_llm()</code> returns a <code>ChatOpenAI</code> object — all LangChain types are unreliable on Streamlit Cloud (Python 3.14 + uvloop). The clean fix is to eliminate LangChain from the hot path entirely.</li>
+      <li><strong>Definitive fix:</strong> <code>extract.py</code> now imports <code>get_model()</code> (not <code>get_llm()</code>). <code>get_model()</code> returns <code>_OpenRouterModel</code> on Streamlit Cloud — its <code>generate_text()</code> method calls the OpenRouter REST API via <code>urllib.request</code> and always returns a plain <code>str</code>. No LangChain types, no wrapping, no ambiguity.</li>
+      <li>Pattern is now identical to <code>classify.py</code>, <code>summarize.py</code>, and <code>draft.py</code> — all four stages use <code>await asyncio.to_thread(model.generate_text, prompt)</code>.</li>
+      <li>Removed all LangChain imports from <code>extract.py</code>: no <code>get_llm</code>, no <code>PromptTemplate</code>, no <code>StrOutputParser</code>, no <code>_to_str()</code>.</li>
+      <li><code>_repair_json()</code> receives a guaranteed <code>str</code> — its type annotation is restored to <code>raw: str</code>.</li>
+      <li><strong>pipeline/extract.py</strong> — commit <code>24ca9e4</code> (session log update: <code>93047e5</code>)</li>
+    </ul>
+  </div>
+
   <!-- GIT LOG -->
   <h2>Git Commit History</h2>
+
+  <div class="commit">
+    <span class="commit-hash">24ca9e4</span> <span class="commit-date">· 2026-07-04 05:35</span>
+    <div class="commit-msg">Fix extract.py: remove LangChain entirely, use get_model().generate_text() directly</div>
+    <div class="commit-files">pipeline/extract.py — 102 lines, LangChain fully removed</div>
+  </div>
+
+  <div class="commit">
+    <span class="commit-hash">93047e5</span> <span class="commit-date">· 2026-07-04 05:30</span>
+    <div class="commit-msg">Update session log with final extract.py fix (llm.ainvoke direct)</div>
+    <div class="commit-files">bob_sessions/session-2026-07-04.html — session log updated</div>
+  </div>
 
   <div class="commit">
     <span class="commit-hash">3f5eb9b</span> <span class="commit-date">· 2026-07-04 05:15</span>
