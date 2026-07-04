@@ -59,6 +59,8 @@
     <tr><td>Fix extract.py — final: drop chain, call llm.ainvoke() directly</td><td><span class="tag tag-done">✅ Done</span></td></tr>
     <tr><td>Fix extract.py — definitive: remove LangChain, use get_model() directly</td><td><span class="tag tag-done">✅ Done</span></td></tr>
     <tr><td>Root cause: retire get_llm() ChatOpenAI; belt-and-suspenders str coercion</td><td><span class="tag tag-done">✅ Done</span></td></tr>
+    <tr><td>Business impact banner + ROI metric on dashboard</td><td><span class="tag tag-done">✅ Done</span></td></tr>
+    <tr><td>10 unit tests — pytest, guardrails, routing, models, classify</td><td><span class="tag tag-done">✅ Done</span></td></tr>
     <tr><td>All changes pushed to GitHub</td><td><span class="tag tag-done">✅ Done</span></td></tr>
   </table>
 
@@ -222,8 +224,49 @@
     </ul>
   </div>
 
+  <div class="task">
+    <div class="task-title">15. Business Impact Banner &amp; ROI Metric on Dashboard <span class="tag tag-done">Done</span></div>
+    <ul>
+      <li><strong>ui/review_app.py</strong> — IBM-blue (<code>#0f62fe</code>) banner immediately after <code>with tab_dash:</code> opens; shows $329K/year misrouting cost and how AI reduces it</li>
+      <li>Metric label updated: <code>"Total Tickets Processed"</code> → <code>"🎫 Tickets Processed"</code></li>
+      <li>Expanded metrics row from 4 → 5 columns; added <code>m5.metric("💰 Est. Annual Saving", "$329K")</code></li>
+      <li><strong>ui/review_app.py</strong> — commit <code>5da9e55</code></li>
+    </ul>
+  </div>
+
+  <div class="task">
+    <div class="task-title">16. 10 Unit Tests — pytest, guardrails, routing, models, classify <span class="tag tag-done">Done</span></div>
+    <ul>
+      <li><strong>tests/test_pipeline.py</strong> — 10 tests across 4 modules; all passed in 0.12 s</li>
+      <li><strong>guardrails/pii_redactor.py</strong> — email, phone, and credit card redaction (3 tests)</li>
+      <li><strong>routing/router.py</strong> — critical priority escalates, low-confidence → human-review, data-loss escalates (3 tests)</li>
+      <li><strong>models.py</strong> — scalar defaults correct; list fields are independent per instance (2 tests)</li>
+      <li><strong>pipeline/classify.py</strong> — stub mode sets <code>category="authentication"</code> and <code>confidence_classify=0.5</code> when <code>get_model()</code> returns <code>None</code>; mocked via <code>unittest.mock.patch</code> (2 tests)</li>
+      <li><strong>pytest.ini</strong> — <code>[pytest] testpaths = tests</code></li>
+      <li>commit <code>596e39e</code></li>
+    </ul>
+  </div>
+
   <!-- GIT LOG -->
   <h2>Git Commit History</h2>
+
+  <div class="commit">
+    <span class="commit-hash">596e39e</span> <span class="commit-date">· 2026-07-04 07:10</span>
+    <div class="commit-msg">Add 10 unit tests for pipeline, routing, guardrails, and models</div>
+    <div class="commit-files">tests/test_pipeline.py · pytest.ini — 129 insertions</div>
+  </div>
+
+  <div class="commit">
+    <span class="commit-hash">5da9e55</span> <span class="commit-date">· 2026-07-04 07:00</span>
+    <div class="commit-msg">Add business impact banner and ROI metric to dashboard</div>
+    <div class="commit-files">ui/review_app.py — 15 insertions, 3 deletions</div>
+  </div>
+
+  <div class="commit">
+    <span class="commit-hash">9d196f5</span> <span class="commit-date">· 2026-07-04 06:30</span>
+    <div class="commit-msg">Update session log: add missing commits b0bf328/3695ccd, update files table</div>
+    <div class="commit-files">bob_sessions/session-2026-07-04.html — 16 insertions, 4 deletions</div>
+  </div>
 
   <div class="commit">
     <span class="commit-hash">3695ccd</span> <span class="commit-date">· 2026-07-04 06:20</span>
@@ -381,8 +424,11 @@
     <tr><td><code>routing/router.py</code></td><td>Confidence threshold → human-review; severity_impact score; sets ticket.requires_human_review</td></tr>
     <tr><td><code>app.py</code></td><td>Full async with asyncio.run(); direct await calls; structured logging</td></tr>
     <tr><td><code>ui/review_app.py</code></td><td>Two-tab layout; executive dashboard with KPIs, bar chart, outage alerts; async pipeline</td></tr>
+    <tr><td><code>ui/review_app.py</code></td><td>Business impact banner (IBM blue); 🎫 metric label; 5th KPI column "💰 Est. Annual Saving $329K"</td></tr>
+    <tr><td><code>tests/test_pipeline.py</code></td><td>10 pytest unit tests — guardrails, routing, models, classify stub mode</td></tr>
+    <tr><td><code>pytest.ini</code></td><td>New — <code>testpaths = tests</code></td></tr>
     <tr><td><code>.devcontainer/devcontainer.json</code></td><td>Added by Streamlit Cloud auto-setup</td></tr>
-    <tr><td><code>bob_sessions/session-2026-07-04.html</code></td><td>This session log — updated through Task 14, commit 3695ccd</td></tr>
+    <tr><td><code>bob_sessions/session-2026-07-04.html</code></td><td>This session log — updated through Task 16, commit 596e39e</td></tr>
   </table>
 
   <!-- ENV -->
