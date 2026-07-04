@@ -77,19 +77,16 @@ def route(ticket: Ticket) -> dict:
     priority = ticket.priority.lower() if ticket.priority else "medium"
 
     # ── Confidence check — route low-confidence tickets to human review ────────
-    low_confidence = (
-        ticket.confidence_classify < CONFIDENCE_THRESHOLD
-        or ticket.confidence_extract < CONFIDENCE_THRESHOLD
-    )
-    if low_confidence:
+    if ticket.classify_confidence < CONFIDENCE_THRESHOLD:
+        ticket.requires_human_review = True
         print(
-            f"[router] Low confidence (classify={ticket.confidence_classify:.2f}, "
-            f"extract={ticket.confidence_extract:.2f}) — routing to human review."
+            f"[router] Low confidence (classify={ticket.classify_confidence:.2f}) "
+            "— routing to human review."
         )
         return {
-            "queue": "queue-human-review",
-            "tags": ["needs-human-review", f"priority-{priority}"],
-            "escalate": False,
+            "queue": "human-review",
+            "tags": ["low-confidence", "needs-human"],
+            "escalate": True,
             "requires_human_review": True,
             "severity_impact": _severity_impact(ticket),
         }

@@ -46,7 +46,8 @@ def classify(ticket: Ticket) -> Ticket:
         )
         ticket.category = "authentication"
         ticket.priority = "high"
-        ticket.confidence_classify = 0.0
+        ticket.confidence_classify = 0.5
+        ticket.classify_confidence = 0.5
         return ticket
 
     t0 = time.perf_counter()
@@ -65,9 +66,11 @@ def classify(ticket: Ticket) -> Ticket:
         priority_match.group(1).strip().lower() if priority_match else "medium"
     )
     try:
-        ticket.confidence_classify = float(confidence_match.group(1)) if confidence_match else 0.5
+        score = float(confidence_match.group(1)) if confidence_match else 0.5
     except ValueError:
-        ticket.confidence_classify = 0.5
+        score = 0.5
+    ticket.confidence_classify = score
+    ticket.classify_confidence = score
 
     log.info(
         "[classify] category=%r priority=%r confidence=%.2f elapsed=%.2fs",

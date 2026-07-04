@@ -25,6 +25,8 @@ class Ticket:
     category: str = ""
     priority: str = ""
     confidence_classify: float = 1.0  # 0.0–1.0; set by classify stage
+    classify_confidence: float = 0.0  # alias used by router/UI (set by classify stage)
+    requires_human_review: bool = False  # set True by router when confidence is low
 
     # ── Set by pipeline/summarize ──────────────────────────────────────────────
     summary: str = ""

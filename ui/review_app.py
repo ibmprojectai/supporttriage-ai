@@ -84,9 +84,16 @@ with col_left:
 
     st.divider()
     st.subheader("📦 Routing")
-    st.markdown(f"**Queue:** `{routing['queue']}`")
-    st.markdown(f"**Tags:** " + "  ".join(f"`{t}`" for t in routing["tags"]))
-    if routing["escalate"]:
+
+    rc1, rc2 = st.columns(2)
+    rc1.metric("Queue", routing["queue"])
+    rc2.metric("AI Confidence", f"{ticket.classify_confidence:.0%}")
+
+    st.markdown("**Tags:** " + "  ".join(f"`{t}`" for t in routing["tags"]))
+
+    if ticket.requires_human_review:
+        st.warning("⚠️ Low confidence — this ticket requires human review before routing.")
+    elif routing["escalate"]:
         st.error("⚠️ This ticket is flagged for **immediate escalation**.")
     else:
         st.success("✅ Standard queue routing.")
