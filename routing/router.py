@@ -1,9 +1,9 @@
 """Routing — HITL-aware queue assignment for the multi-channel ops center.
 
 Rules (production HITL thresholds):
-  - Auto-Routed:    confidence > 0.85 AND priority != "critical"
-  - Human-Review:   confidence <= 0.85  (held — NOT sent to a queue automatically)
-  - Escalated:      priority == "critical" OR category == "data-loss"
+  - Auto-Routed:    confidence >= 0.85 AND priority != "critical"
+  - Human-Review:   confidence < 0.85  (held — NOT sent to a queue automatically)
+  - Escalated:      (priority == "critical" OR category == "data-loss") AND confidence >= 0.85
 
 severity_impact score is calculated from priority (0–10 scale).
 """
@@ -79,8 +79,8 @@ def route(ticket: Ticket) -> dict:
     priority = (ticket.priority or "medium").lower()
     conf     = ticket.classify_confidence
 
-    # ── 1. Escalation: critical priority or data-loss category ────────────────
-    if priority == "critical" or category == "data-loss":
+    # ── 1. Escalation: critical priority or data-loss category (only when confident) ──
+    if (priority == "critical" or category == "data-loss") and conf >= AUTO_ROUTE_THRESHOLD:
         ticket.requires_human_review = False
         ticket.status = "escalated"
         queue = _CATEGORY_QUEUE.get(category, _CATEGORY_QUEUE["other"])
@@ -100,8 +100,8 @@ def route(ticket: Ticket) -> dict:
             "status":               "escalated",
         }
 
-    # ── 2. Human review: confidence at or below threshold ────────────────────
-    if conf <= AUTO_ROUTE_THRESHOLD:
+    # ── 2. Human review: confidence below threshold ──────────────────────────
+    if conf < AUTO_ROUTE_THRESHOLD:
         ticket.requires_human_review = True
         ticket.status = "human-review"
         print(
