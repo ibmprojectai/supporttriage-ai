@@ -68,6 +68,7 @@
     <tr><td>All changes pushed to GitHub</td><td><span class="tag tag-done">✅ Done</span></td></tr>
     <tr><td>4-tab IBM Carbon UI rebuild (Try It Live, All Tickets, Dashboard, Ticket Review)</td><td><span class="tag tag-done">✅ Done</span></td></tr>
     <tr><td>Multi-channel rebuild: Email + Twitter + Chat inbox, Outage Radar, System Logs</td><td><span class="tag tag-done">✅ Done</span></td></tr>
+    <tr><td>Real product rebuild: HITL routing (0.85 threshold), Telegram/Gmail connectors, systemic outage radar</td><td><span class="tag tag-done">✅ Done</span></td></tr>
   </table>
 
   <!-- TASKS -->
@@ -264,6 +265,21 @@
   </div>
 
   <div class="task">
+    <div class="task-title">23. Real Product Rebuild — Multi-Channel Agentic Support Operations Center <span class="tag tag-done">Done</span></div>
+    <ul>
+      <li><strong>models.py</strong> — updated <code>channel</code> default to <code>"web"</code>; added <code>status: str = "untriaged"</code> field ("untriaged" | "auto-routed" | "human-review" | "escalated" | "approved")</li>
+      <li><strong>intake/channels.py</strong> — new module: <code>fetch_telegram_updates(bot_token, last_update_id)</code> polls Telegram Bot API (getUpdates) and returns <code>Ticket</code> objects; <code>fetch_unread_emails(user, app_password)</code> reads Gmail via <code>imaplib</code> IMAP4_SSL; <code>generate_background_volume(count=15)</code> returns 7 email + 5 web + 3 telegram tickets with ≥3 sharing ERR-5001 symptom for Outage Radar</li>
+      <li><strong>routing/router.py</strong> — HITL production thresholds: <code>AUTO_ROUTE_THRESHOLD = 0.85</code>; strict three-tier logic: (1) critical/data-loss → escalated, (2) conf ≤ 0.85 → human-review (NOT auto-dispatched), (3) conf > 0.85 + non-critical → auto-routed; routing dict now includes <code>status</code> key; added ERR-9 to critical error prefixes</li>
+      <li><strong>ui/review_app.py</strong> — complete architectural rewrite: sidebar Live Connectors (Telegram + Gmail + Reset); View A: Triage Queue (channel-colour-coded inbox cards → async batch triage); View B: 4-tab Ops Dashboard post-triage</li>
+      <li><strong>📊 Business Impact &amp; Metrics</strong> — impact banner, 5 KPIs, confidence gauge with 85% threshold line marker, Outage Radar firing on ≥3 matching symptoms (SYSTEMIC OUTAGE banner) or ≥2 (pattern emerging warning), category + channel side-by-side charts</li>
+      <li><strong>🧑‍💻 Human-in-the-Loop Queue</strong> — all human-review tickets shown as expandable HITL cards; left panel: AI reasoning table (category/priority/confidence/threshold), confidence bar, error codes, symptoms, AI summary; right panel: queue selector dropdown + editable draft + Approve &amp; Route button that updates status in-place and reruns</li>
+      <li><strong>🟢 Auto-Routed Log</strong> — read-only <code>st.dataframe</code> of all auto-routed tickets (ID, channel, subject, category, priority, confidence, queue, severity)</li>
+      <li><strong>⚙️ System Logs</strong> — monospace terminal with per-ticket routing decisions, timestamps, HITL approval entries</li>
+      <li>commit <code>3fc2f1c</code></li>
+    </ul>
+  </div>
+
+  <div class="task">
     <div class="task-title">22. Complete Rebuild — Multi-Channel Support Operations Center <span class="tag tag-done">Done</span></div>
     <ul>
       <li><strong>models.py</strong> — added <code>channel: str = "email"</code> field to <code>Ticket</code> dataclass</li>
@@ -305,6 +321,12 @@
 
   <!-- GIT LOG -->
   <h2>Git Commit History</h2>
+
+  <div class="commit">
+    <span class="commit-hash">3fc2f1c</span> <span class="commit-date">· 2026-07-04 11:00</span>
+    <div class="commit-msg">Real product rebuild: multi-channel agentic ops center with HITL routing, Telegram/Gmail connectors, outage radar</div>
+    <div class="commit-files">models.py · intake/channels.py (new) · routing/router.py · ui/review_app.py — 1,212 insertions, 294 deletions</div>
+  </div>
 
   <div class="commit">
     <span class="commit-hash">b1c31b1</span> <span class="commit-date">· 2026-07-04 10:00</span>
