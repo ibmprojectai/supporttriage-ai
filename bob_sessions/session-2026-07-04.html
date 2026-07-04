@@ -69,6 +69,7 @@
     <tr><td>4-tab IBM Carbon UI rebuild (Try It Live, All Tickets, Dashboard, Ticket Review)</td><td><span class="tag tag-done">✅ Done</span></td></tr>
     <tr><td>Multi-channel rebuild: Email + Twitter + Chat inbox, Outage Radar, System Logs</td><td><span class="tag tag-done">✅ Done</span></td></tr>
     <tr><td>Real product rebuild: HITL routing (0.85 threshold), Telegram/Gmail connectors, systemic outage radar</td><td><span class="tag tag-done">✅ Done</span></td></tr>
+    <tr><td>Fix SyntaxError: escaped quotes in f-strings rejected by Python 3.14 on Streamlit Cloud</td><td><span class="tag tag-done">✅ Done</span></td></tr>
   </table>
 
   <!-- TASKS -->
@@ -265,6 +266,17 @@
   </div>
 
   <div class="task">
+    <div class="task-title">24. Fix SyntaxError — Escaped Quotes in f-strings (Python 3.14) <span class="tag tag-done">Done</span></div>
+    <div class="warn">⚠️ Streamlit Cloud (Python 3.14.6) raised <code>SyntaxError: unexpected character after line continuation character</code> at <code>ui/review_app.py:326</code>. Python 3.14 enforces stricter f-string parsing — backslash escapes (<code>\"</code>) inside f-string expressions are a syntax error.</div>
+    <ul>
+      <li><strong>Root cause:</strong> two f-strings used <code>f"...{dict.get(x, \"fallback\")}..."</code> — valid in Python ≤ 3.11, rejected in 3.14</li>
+      <li><strong>Fix:</strong> replaced both expressions with <code>"...{val}...".format(val=dict.get(x, "#fallback"))</code> — no backslash needed</li>
+      <li>Lines fixed: <code>ui/review_app.py:326</code> (inbox channel summary) and <code>:526</code> (outage radar channels string)</li>
+      <li>commit <code>0046af4</code></li>
+    </ul>
+  </div>
+
+  <div class="task">
     <div class="task-title">23. Real Product Rebuild — Multi-Channel Agentic Support Operations Center <span class="tag tag-done">Done</span></div>
     <ul>
       <li><strong>models.py</strong> — updated <code>channel</code> default to <code>"web"</code>; added <code>status: str = "untriaged"</code> field ("untriaged" | "auto-routed" | "human-review" | "escalated" | "approved")</li>
@@ -321,6 +333,12 @@
 
   <!-- GIT LOG -->
   <h2>Git Commit History</h2>
+
+  <div class="commit">
+    <span class="commit-hash">0046af4</span> <span class="commit-date">· 2026-07-04 11:30</span>
+    <div class="commit-msg">Fix SyntaxError: remove escaped quotes from f-strings in review_app.py</div>
+    <div class="commit-files">ui/review_app.py — 11 insertions, 4 deletions</div>
+  </div>
 
   <div class="commit">
     <span class="commit-hash">3fc2f1c</span> <span class="commit-date">· 2026-07-04 11:00</span>
