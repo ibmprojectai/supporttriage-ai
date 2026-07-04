@@ -71,6 +71,7 @@
     <tr><td>Real product rebuild: HITL routing (0.85 threshold), Telegram/Gmail connectors, systemic outage radar</td><td><span class="tag tag-done">✅ Done</span></td></tr>
     <tr><td>Fix SyntaxError: escaped quotes in f-strings rejected by Python 3.14 on Streamlit Cloud</td><td><span class="tag tag-done">✅ Done</span></td></tr>
     <tr><td>Final submission: README rewrite + 3 Bob session log markdown files</td><td><span class="tag tag-done">✅ Done</span></td></tr>
+    <tr><td>Make IMAP server configurable via IMAP_SERVER env var</td><td><span class="tag tag-done">✅ Done</span></td></tr>
   </table>
 
   <!-- TASKS -->
@@ -267,6 +268,17 @@
   </div>
 
   <div class="task">
+    <div class="task-title">26. Make IMAP Server Configurable via Env Var <span class="tag tag-done">Done</span></div>
+    <div class="warn">⚠️ A Gmail app password was shared in chat during this task. It was NOT committed to git. Recommend revoking it immediately at myaccount.google.com/apppasswords and generating a new one. Store credentials in Streamlit Cloud Secrets only.</div>
+    <ul>
+      <li><strong>intake/channels.py</strong> — added <code>import os</code>; <code>fetch_unread_emails()</code> now reads <code>imap_server = os.environ.get("IMAP_SERVER", "imap.gmail.com")</code> instead of a hardcoded string; passes it to <code>imaplib.IMAP4_SSL(imap_server, 993)</code></li>
+      <li><strong>.env.example</strong> — added <code>IMAP_SERVER=imap.gmail.com</code> with explanatory comment</li>
+      <li>Credentials (Gmail user + app password) go in local <code>.env</code> (git-ignored) or Streamlit Cloud Secrets — never in committed files</li>
+      <li>commit <code>e4a3929</code></li>
+    </ul>
+  </div>
+
+  <div class="task">
     <div class="task-title">25. Final Submission — README Rewrite + Bob Session Log Exports <span class="tag tag-done">Done</span></div>
     <ul>
       <li><strong>README.md</strong> — complete rewrite with Business Impact table, tree-structured architecture diagram, HITL routing logic block, Telegram setup guide (5 steps), full environment variables table, pytest invocation</li>
@@ -345,6 +357,12 @@
 
   <!-- GIT LOG -->
   <h2>Git Commit History</h2>
+
+  <div class="commit">
+    <span class="commit-hash">e4a3929</span> <span class="commit-date">· 2026-07-04 12:30</span>
+    <div class="commit-msg">Make IMAP server configurable via env var</div>
+    <div class="commit-files">intake/channels.py · .env.example — 9 insertions, 3 deletions</div>
+  </div>
 
   <div class="commit">
     <span class="commit-hash">3d6519c</span> <span class="commit-date">· 2026-07-04 12:00</span>
