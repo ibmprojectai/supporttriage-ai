@@ -2,12 +2,14 @@
 
 Production usage: replace the body of fetch_ticket() with a real Zendesk REST call.
 The stub path returns a fully populated mock Ticket so the pipeline can run without
-any credentials.
+any credentials. Exports: fetch_ticket, fetch_all_tickets.
 """
 
 from __future__ import annotations
 
 from models import Ticket
+
+__all__ = ["fetch_ticket", "fetch_all_tickets"]
 
 
 def fetch_ticket(ticket_id: str) -> Ticket:
