@@ -323,8 +323,12 @@ if st.session_state.inbox:
     # ── Header + counts ────────────────────────────────────────────────────────
     ch_counts = Counter(t.channel for t in inbox)
     ch_summary = "  ·  ".join(
-        f"<span style='color:{_CHANNEL_COLOR.get(ch, \"#8d8d8d\")}'>"
-        f"{_CHANNEL_ICON.get(ch,'?')} {ch.upper()}: {n}</span>"
+        "<span style='color:{c}'>{i} {ch}: {n}</span>".format(
+            c=_CHANNEL_COLOR.get(ch, "#8d8d8d"),
+            i=_CHANNEL_ICON.get(ch, "?"),
+            ch=ch.upper(),
+            n=n,
+        )
         for ch, n in sorted(ch_counts.items())
     )
     st.markdown(
@@ -523,8 +527,11 @@ misrouting <em>and</em> automation failures simultaneously.
             count = len(tickets_with_sym)
             channels_affected = sorted({t.channel for t in tickets_with_sym})
             channels_str = " + ".join(
-                f"<span style='color:{_CHANNEL_COLOR.get(c, \"#8d8d8d\")}'>"
-                f"{_CHANNEL_ICON.get(c,'')} {c.upper()}</span>"
+                "<span style='color:{col}'>{icon} {ch}</span>".format(
+                    col=_CHANNEL_COLOR.get(c, "#8d8d8d"),
+                    icon=_CHANNEL_ICON.get(c, ""),
+                    ch=c.upper(),
+                )
                 for c in channels_affected
             )
             if count >= 3:
