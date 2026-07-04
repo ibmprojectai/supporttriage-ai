@@ -67,6 +67,7 @@
     <tr><td>Fix ImportError: force .pyc cache-bust on zendesk_connector.py</td><td><span class="tag tag-done">✅ Done</span></td></tr>
     <tr><td>All changes pushed to GitHub</td><td><span class="tag tag-done">✅ Done</span></td></tr>
     <tr><td>4-tab IBM Carbon UI rebuild (Try It Live, All Tickets, Dashboard, Ticket Review)</td><td><span class="tag tag-done">✅ Done</span></td></tr>
+    <tr><td>Multi-channel rebuild: Email + Twitter + Chat inbox, Outage Radar, System Logs</td><td><span class="tag tag-done">✅ Done</span></td></tr>
   </table>
 
   <!-- TASKS -->
@@ -263,6 +264,21 @@
   </div>
 
   <div class="task">
+    <div class="task-title">22. Complete Rebuild — Multi-Channel Support Operations Center <span class="tag tag-done">Done</span></div>
+    <ul>
+      <li><strong>models.py</strong> — added <code>channel: str = "email"</code> field to <code>Ticket</code> dataclass</li>
+      <li><strong>intake/data_generator.py</strong> — new file; <code>generate_inbox(20)</code> returns 7 email + 7 twitter + 6 chat tickets; 4 tickets share ERR-5001/dashboard-timeout symptoms to trigger Outage Radar; realistic senders (james.wilson@techcorp.com, @frustrated_dev_99, chat_session_4821, …)</li>
+      <li><strong>ui/review_app.py</strong> — complete rewrite as a two-state app: <em>Inbox View</em> (20 untriaged cards + single triage button) → <em>Triaged View</em> (3 tabs); all 20 tickets processed concurrently with <code>asyncio.gather()</code></li>
+      <li><strong>📊 Operations Dashboard</strong> — business impact banner, 4 KPI metrics (processed / auto-routed / escalated / human-review), confidence gauge, Outage Radar (fires on ≥2 matching symptoms), category + channel bar charts</li>
+      <li><strong>📥 Triaged Queue</strong> — expandable card per ticket; category + priority + channel badges; confidence bar; editable draft reply; Approve button per ticket</li>
+      <li><strong>⚙️ System Logs</strong> — monospace terminal block showing per-ticket routing decisions, confidence, queue, elapsed time from async batch run</li>
+      <li><strong>🔄 Reset Inbox</strong> — resets all session state and regenerates a fresh 20-ticket inbox</li>
+      <li><strong>README.md</strong> — title updated to "Multi-Channel Support Operations Center"; channels section added; architecture and stack tables updated; quick start simplified to 3 steps</li>
+      <li>commit <code>b1c31b1</code></li>
+    </ul>
+  </div>
+
+  <div class="task">
     <div class="task-title">21. Complete UI Rebuild — 4-Tab IBM Carbon Design System <span class="tag tag-done">Done</span></div>
     <ul>
       <li><strong>ui/review_app.py</strong> — full rewrite: 560 lines, IBM Carbon dark theme (<code>#161616</code> bg, <code>#0f62fe</code> accent)</li>
@@ -289,6 +305,18 @@
 
   <!-- GIT LOG -->
   <h2>Git Commit History</h2>
+
+  <div class="commit">
+    <span class="commit-hash">b1c31b1</span> <span class="commit-date">· 2026-07-04 10:00</span>
+    <div class="commit-msg">Complete rebuild: multi-channel ops center with inbox, outage radar, and system logs</div>
+    <div class="commit-files">models.py · intake/data_generator.py · ui/review_app.py · README.md — 722 insertions, 574 deletions</div>
+  </div>
+
+  <div class="commit">
+    <span class="commit-hash">22d8c52</span> <span class="commit-date">· 2026-07-04 09:20</span>
+    <div class="commit-msg">Update session log: Task 21 (4-tab IBM Carbon UI rebuild)</div>
+    <div class="commit-files">bob_sessions/session-2026-07-04.html — 27 insertions</div>
+  </div>
 
   <div class="commit">
     <span class="commit-hash">7a72c5d</span> <span class="commit-date">· 2026-07-04 09:15</span>
