@@ -54,7 +54,7 @@ class _OpenRouterModel:
     """
 
     def generate_text(self, prompt: str) -> str:
-        """Send prompt to OpenRouter and return the generated text."""
+        """Send prompt to OpenRouter and return the generated text as a plain str."""
         import json
         import urllib.request
 
@@ -73,7 +73,9 @@ class _OpenRouterModel:
         )
         with urllib.request.urlopen(req, timeout=60) as resp:
             data = json.loads(resp.read())
-            return data["choices"][0]["message"]["content"].strip()
+            # Always return a plain str — never a LangChain type
+            result = data["choices"][0]["message"]["content"]
+            return str(result).strip()
 
 
 # ── Ollama backend ────────────────────────────────────────────────────────────
@@ -140,40 +142,10 @@ def get_model() -> _OpenRouterModel | _OllamaModel | None:
 
 
 def get_llm():
-    """LangChain-compatible accessor — returns a ChatOpenAI, OllamaLLM, or None.
+    """Deprecated shim — returns the same backend as get_model().
 
-    Used by pipeline/extract.py which uses a LangChain chain.
-
-    Priority:
-      1. ChatOpenAI (OpenRouter) — when OPENROUTER_API_KEY is set
-      2. OllamaLLM               — when local Ollama server is reachable
-      3. None                    — stub mode
+    Previously returned a LangChain ChatOpenAI/OllamaLLM object, which caused
+    AIMessage type errors on Streamlit Cloud (Python 3.14 + uvloop).
+    Now delegates to get_model() so any old cached caller gets a safe backend.
     """
-    if OPENROUTER_API_KEY:
-        try:
-            from langchain_openai import ChatOpenAI
-            print(f"[llm_config] Using OpenRouter LangChain backend ({_OPENROUTER_MODEL}).")
-            return ChatOpenAI(
-                base_url=_OPENROUTER_BASE_URL,
-                api_key=OPENROUTER_API_KEY,
-                model=_OPENROUTER_MODEL,
-                temperature=0.2,
-            )
-        except Exception as exc:
-            print(f"[llm_config] Failed to initialise ChatOpenAI: {exc}")
-            return None
-
-    model, base_url = _get_config()
-    if not _ollama_reachable(base_url):
-        print(
-            f"[llm_config] Ollama not reachable at {base_url}. "
-            "Running in stub mode."
-        )
-        return None
-
-    try:
-        from langchain_ollama import OllamaLLM
-        return OllamaLLM(model=model, base_url=base_url, temperature=0.2, num_predict=512)
-    except Exception as exc:
-        print(f"[llm_config] Failed to initialise OllamaLLM: {exc}")
-        return None
+    return get_model()

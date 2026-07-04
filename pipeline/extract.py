@@ -36,8 +36,16 @@ _ERR_RE = re.compile(r"\bERR-\d+\b")
 _ACC_RE = re.compile(r"\bACC-\d+\b")
 
 
-def _repair_json(raw: str) -> str:
-    """Strip markdown fences and common LLM JSON noise. Expects a plain str."""
+def _repair_json(raw) -> str:
+    """Strip markdown fences and common LLM JSON noise.
+
+    Accepts any type — coerces to str first so this never crashes on AIMessage
+    or other LangChain types even if they somehow reach this function.
+    """
+    # Unwrap LangChain AIMessage / BaseMessage if it somehow arrives here
+    if hasattr(raw, "content"):
+        raw = raw.content
+    raw = str(raw)
     clean = re.sub(r"```(?:json)?", "", raw).strip().rstrip("`").strip()
     brace = clean.find("{")
     if brace > 0:
@@ -66,10 +74,14 @@ async def extract(ticket: Ticket) -> Ticket:
 
     t0 = time.perf_counter()
     # generate_text() is synchronous — run in thread so we don't block the event loop
-    response: str = await asyncio.to_thread(model.generate_text, prompt)
+    raw_response = await asyncio.to_thread(model.generate_text, prompt)
     elapsed = time.perf_counter() - t0
 
-    # response is guaranteed str — generate_text() always returns str
+    # Defensive coercion — _repair_json also does this, but belt-and-suspenders
+    if hasattr(raw_response, "content"):
+        raw_response = raw_response.content
+    response: str = str(raw_response)
+
     try:
         clean = _repair_json(response)
         data: dict = json.loads(clean)
