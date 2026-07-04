@@ -1,6 +1,8 @@
 # supporttriage-ai
 
-An AI-powered support ticket triage tool built with **IBM Granite** (via watsonx.ai), **LangChain**, **ChromaDB**, and **Streamlit**.
+An AI-powered support ticket triage tool built with **IBM Granite** (via Ollama, fully local), **LangChain**, **ChromaDB**, and **Streamlit**.
+
+Runs 100% locally — no API key, no account, no internet required after the initial model pull.
 
 ---
 
@@ -31,7 +33,7 @@ pipeline/summarize.py           →  summary
 pipeline/draft.py               →  draft_reply  (RAG via ChromaDB)
 routing/router.py               →  queue + tags + escalate flag
 ui/review_app.py                →  Streamlit agent review UI
-watsonx_config.py               →  shared IBM Granite LLM factory
+watsonx_config.py               →  shared Ollama Granite LLM factory
 ```
 
 ---
@@ -40,7 +42,7 @@ watsonx_config.py               →  shared IBM Granite LLM factory
 
 | Component | Technology |
 |---|---|
-| LLM | IBM Granite 3 (`ibm/granite-3-3-8b-instruct`) via watsonx.ai |
+| LLM | IBM Granite 3.1 8B (`granite3.1:8b`) via Ollama (local) |
 | Orchestration | LangChain |
 | Vector store | ChromaDB (local, file-backed) |
 | UI | Streamlit |
@@ -50,26 +52,55 @@ watsonx_config.py               →  shared IBM Granite LLM factory
 
 ## Quick start
 
-### 1. Install dependencies
+### 1. Install Ollama
+
+Download and install from **https://ollama.com/download** (Windows / Mac / Linux).
+
+Ollama runs as a background service automatically after install.
+
+### 2. Pull the Granite model
+
+```bash
+ollama pull granite3.1:8b
+```
+
+This downloads ~5 GB once. After that everything runs offline.
+
+> **Fallback:** if `granite3.1:8b` is unavailable, try `ollama pull granite3:8b`
+> and set `OLLAMA_MODEL=granite3:8b` in your `.env`.
+
+### 3. Install Python dependencies
+
 ```bash
 pip install -r requirements.txt
 ```
 
-### 2. Configure environment
+### 4. (Optional) Configure environment
+
 ```bash
 cp .env.example .env
-# Fill in your watsonx.ai credentials in .env
+# Edit .env only if Ollama runs on a non-default host/port
 ```
 
-### 3. Run the pipeline (stub mode — no credentials needed)
+No credentials needed — the defaults work out of the box.
+
+### 5. Run the pipeline
+
 ```bash
 python app.py
 ```
 
-### 4. Launch the Streamlit review UI
+### 6. Launch the Streamlit review UI
+
 ```bash
 streamlit run ui/review_app.py
 ```
+
+---
+
+## Stub / offline mode
+
+If Ollama is not running, every LLM stage degrades gracefully — the pipeline still runs end-to-end using regex fallbacks and templated strings. `python app.py` works with zero config.
 
 ---
 
@@ -77,13 +108,9 @@ streamlit run ui/review_app.py
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
-| `WATSONX_API_KEY` | Yes (live mode) | — | IBM Cloud API key |
-| `WATSONX_URL` | Yes (live mode) | — | watsonx.ai endpoint |
-| `WATSONX_PROJECT_ID` | Yes (live mode) | — | watsonx.ai project GUID |
-| `WATSONX_MODEL_ID` | No | `ibm/granite-3-3-8b-instruct` | Foundation model ID |
+| `OLLAMA_BASE_URL` | No | `http://localhost:11434` | Ollama server URL |
+| `OLLAMA_MODEL` | No | `granite3.1:8b` | Model name to use |
 | `CHROMA_PERSIST_DIR` | No | `.chromadb` | ChromaDB storage path |
-
-> **Stub mode:** if `WATSONX_*` credentials are absent, every LLM stage degrades gracefully — the pipeline still runs end-to-end using regex fallbacks and templated strings.
 
 ---
 
@@ -92,7 +119,7 @@ streamlit run ui/review_app.py
 ```
 supporttriage-ai/
 ├── models.py                   # Ticket dataclass (shared contract)
-├── watsonx_config.py           # Shared IBM Granite LLM factory
+├── watsonx_config.py           # Shared Ollama Granite LLM factory
 ├── app.py                      # Orchestration entry point
 ├── requirements.txt
 ├── .env.example                # Environment variable template
