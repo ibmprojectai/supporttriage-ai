@@ -72,6 +72,7 @@
     <tr><td>Fix SyntaxError: escaped quotes in f-strings rejected by Python 3.14 on Streamlit Cloud</td><td><span class="tag tag-done">✅ Done</span></td></tr>
     <tr><td>Final submission: README rewrite + 3 Bob session log markdown files</td><td><span class="tag tag-done">✅ Done</span></td></tr>
     <tr><td>Make IMAP server configurable via IMAP_SERVER env var</td><td><span class="tag tag-done">✅ Done</span></td></tr>
+    <tr><td>Professional UI: Settings page, sidebar nav, enterprise header, saved credentials</td><td><span class="tag tag-done">✅ Done</span></td></tr>
   </table>
 
   <!-- TASKS -->
@@ -268,6 +269,22 @@
   </div>
 
   <div class="task">
+    <div class="task-title">27. Professional UI Rebuild — Settings Page, Sidebar Nav, Enterprise Header <span class="tag tag-done">Done</span></div>
+    <ul>
+      <li><strong>Sidebar</strong> — replaced raw credential inputs with branded navigation radio (📥 Inbox / 📊 Dashboard / 🧑‍💻 Review Queue / ⚙️ Settings); live channel status dots (green = connected, grey = not configured); queue summary stat rows; Reset Inbox button</li>
+      <li><strong>⚙️ Settings page</strong> — four settings cards (Telegram, Gmail, Web Form, AI Engine); each has a save + live connection test; credentials stored in <code>st.session_state</code> only; <code>st.stop()</code> after render so no other page renders</li>
+      <li><strong>Enterprise header</strong> — flex layout with app name, subtitle, ● LIVE pill badge, and model chip; border-bottom separator; replaces old plain h1</li>
+      <li><strong>📥 Inbox</strong> — fetch buttons use <code>st.session_state.tg_token</code> / <code>gmail_user</code> / <code>gmail_pass</code> (no raw inputs); graceful "go to Settings" warning if not configured; denser card design with monospace ID, smaller icon, tighter spacing</li>
+      <li><strong>📊 Dashboard</strong> — standalone page (no tabs); impact banner + 5 KPIs + confidence gauge + Outage Radar + side-by-side charts + collapsible system log expander</li>
+      <li><strong>🧑‍💻 Review Queue</strong> — standalone page; identical HITL card logic; uppercase letter-spaced section headers</li>
+      <li><strong>CSS overhaul</strong> — darker base (#0d0d0d), tighter borders (#1f1f1f), micro-contrast badges with coloured borders, sidebar radio custom styling, settings-card component, stat-row component, refined confidence bar (6px), terminal log (#080808 + #3fb950)</li>
+      <li>Credentials seeded from env vars on first load (TELEGRAM_BOT_TOKEN, GMAIL_USER, GMAIL_APP_PASSWORD, IMAP_SERVER, OPENROUTER_API_KEY)</li>
+      <li>No escaped quotes in f-strings — Python 3.14 compatible</li>
+      <li>commit <code>c7557f6</code></li>
+    </ul>
+  </div>
+
+  <div class="task">
     <div class="task-title">26. Make IMAP Server Configurable via Env Var <span class="tag tag-done">Done</span></div>
     <div class="warn">⚠️ A Gmail app password was shared in chat during this task. It was NOT committed to git. Recommend revoking it immediately at myaccount.google.com/apppasswords and generating a new one. Store credentials in Streamlit Cloud Secrets only.</div>
     <ul>
@@ -357,6 +374,12 @@
 
   <!-- GIT LOG -->
   <h2>Git Commit History</h2>
+
+  <div class="commit">
+    <span class="commit-hash">c7557f6</span> <span class="commit-date">· 2026-07-04 13:00</span>
+    <div class="commit-msg">Professional UI: Settings page, sidebar nav, enterprise header, saved credentials</div>
+    <div class="commit-files">ui/review_app.py — 706 insertions, 538 deletions</div>
+  </div>
 
   <div class="commit">
     <span class="commit-hash">e4a3929</span> <span class="commit-date">· 2026-07-04 12:30</span>
