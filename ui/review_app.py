@@ -15,6 +15,7 @@ Launch:
 from __future__ import annotations
 
 import asyncio
+import html as _html
 import os
 import sys
 import time
@@ -586,9 +587,16 @@ if page == "📥 Inbox":
         icon    = _CHANNEL_ICON.get(ch, "?")
         color   = _CHANNEL_COLOR.get(ch, "#8d8d8d")
         preview = (t.body[:120] + "…") if len(t.body) > 120 else t.body
+        # Escape all user-supplied fields before HTML injection
+        id_safe      = _html.escape(t.id      or "")
+        sender_safe  = _html.escape(t.sender  or "")
+        subject_safe = _html.escape(t.subject or "")
+        preview_safe = _html.escape(preview)
         errs    = "  ".join(
             "<code style='background:#1a1a1a;color:#82b4ff;padding:1px 5px;"
-            "border-radius:3px;font-size:0.72rem;border:1px solid #0f62fe33'>{e}</code>".format(e=e)
+            "border-radius:3px;font-size:0.72rem;border:1px solid #0f62fe33'>{e}</code>".format(
+                e=_html.escape(e)
+            )
             for e in t.error_codes
         ) if t.error_codes else ""
 
@@ -597,14 +605,14 @@ if page == "📥 Inbox":
   <span style='font-size:1.1rem;flex-shrink:0;padding-top:3px;opacity:0.85'>{icon}</span>
   <div style='flex:1;min-width:0'>
     <div style='display:flex;align-items:center;gap:0.5rem;margin-bottom:0.15rem;flex-wrap:wrap'>
-      <span style='color:#525252;font-size:0.72rem;font-family:monospace'>{t.id}</span>
+      <span style='color:#525252;font-size:0.72rem;font-family:monospace'>{id_safe}</span>
       <span style='color:{color};font-size:0.72rem;font-weight:700'>{ch.upper()}</span>
-      <span style='color:#525252;font-size:0.72rem'>{t.sender}</span>
+      <span style='color:#525252;font-size:0.72rem'>{sender_safe}</span>
       {errs}
     </div>
     <div style='color:#e8e8e8;font-weight:600;font-size:0.88rem;margin-bottom:0.15rem;
-         white-space:nowrap;overflow:hidden;text-overflow:ellipsis'>{t.subject}</div>
-    <div style='color:#525252;font-size:0.78rem;line-height:1.4'>{preview}</div>
+         white-space:nowrap;overflow:hidden;text-overflow:ellipsis'>{subject_safe}</div>
+    <div style='color:#525252;font-size:0.78rem;line-height:1.4'>{preview_safe}</div>
   </div>
   <span class='badge badge-untriaged' style='flex-shrink:0;margin-top:3px'>UNTRIAGED</span>
 </div>""", unsafe_allow_html=True)
@@ -761,9 +769,10 @@ HITL routing holds low-confidence tickets for agent review: only confidence &gt;
         )
         ids_html = " ".join(
             "<code style='background:#1a1a1a;color:#82b4ff;padding:1px 5px;"
-            "border-radius:3px;font-size:0.7rem'>{id}</code>".format(id=t.id)
+            "border-radius:3px;font-size:0.7rem'>{id}</code>".format(id=_html.escape(t.id))
             for t in tix
         )
+        symptom_safe = _html.escape(symptom)
         if count >= 3:
             outage_found = True
             st.markdown(f"""<div class='outage-critical'>
@@ -771,7 +780,7 @@ HITL routing holds low-confidence tickets for agent review: only confidence &gt;
   🚨 SYSTEMIC OUTAGE DETECTED
 </div>
 <div style='color:#f4f4f4;font-size:0.88rem;margin-bottom:0.25rem'>
-  <b>{count} users</b> reporting <b>"{symptom}"</b> across {ch_str}
+  <b>{count} users</b> reporting <b>"{symptom_safe}"</b> across {ch_str}
 </div>
 <div style='color:#6f6f6f;font-size:0.78rem;margin-bottom:0.3rem'>{ids_html}</div>
 <div style='color:#ff8389;font-size:0.78rem;font-weight:600'>
@@ -783,7 +792,7 @@ HITL routing holds low-confidence tickets for agent review: only confidence &gt;
 <span style='color:#f5d87c;font-weight:700;font-size:0.85rem'>⚠️ Pattern emerging</span>
 &nbsp;&nbsp;
 <span style='color:#c6c6c6;font-size:0.82rem'><b>{count} tickets</b> reporting
-<b>"{symptom}"</b> — {ch_str}</span>
+<b>"{symptom_safe}"</b> — {ch_str}</span>
 &nbsp;
 <span style='color:#525252;font-size:0.78rem'>Monitor for further reports.</span>
 </div>""", unsafe_allow_html=True)
@@ -860,12 +869,13 @@ elif page == "🧑‍💻 Review Queue":
             f"{ch_icon}  {t.id}  —  {t.subject[:72]}{'…' if len(t.subject)>72 else ''}",
             expanded=False,
         ):
+            sender_safe = _html.escape(t.sender or "")
             st.markdown(
                 f"<div class='hitl-card'>"
                 f"<div style='margin-bottom:0.4rem'>{_ticket_badges(t)}</div>"
                 f"<div style='display:flex;gap:2rem;flex-wrap:wrap'>"
                 f"<span style='color:#6f6f6f;font-size:0.8rem'>Sender: "
-                f"<b style='color:#c6c6c6'>{t.sender}</b></span>"
+                f"<b style='color:#c6c6c6'>{sender_safe}</b></span>"
                 f"<span style='color:#6f6f6f;font-size:0.8rem'>Held in: "
                 f"<b style='color:#f1c21b'>human-review</b></span>"
                 f"<span style='color:#6f6f6f;font-size:0.8rem'>Severity: "
@@ -898,7 +908,9 @@ elif page == "🧑‍💻 Review Queue":
                 if t.symptoms:
                     chips = " ".join(
                         "<span style='background:#1a1a1a;color:#8d8d8d;padding:1px 7px;"
-                        "border-radius:10px;font-size:0.72rem;border:1px solid #2a2a2a'>{s}</span>".format(s=s)
+                        "border-radius:10px;font-size:0.72rem;border:1px solid #2a2a2a'>{s}</span>".format(
+                            s=_html.escape(s)
+                        )
                         for s in t.symptoms
                     )
                     st.markdown(f"**Symptoms:** {chips}", unsafe_allow_html=True)
