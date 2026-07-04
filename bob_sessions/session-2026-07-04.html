@@ -55,6 +55,8 @@
     <tr><td>OpenRouter / Granite 4.1 cloud backend</td><td><span class="tag tag-done">✅ Done</span></td></tr>
     <tr><td>Fix AIMessage crash in extract.py — attempt 1</td><td><span class="tag tag-done">✅ Done</span></td></tr>
     <tr><td>Fix extract.py — proper fix with StrOutputParser</td><td><span class="tag tag-done">✅ Done</span></td></tr>
+    <tr><td>Fix extract.py — harden _repair_json (Streamlit Cloud Python 3.14)</td><td><span class="tag tag-done">✅ Done</span></td></tr>
+    <tr><td>Fix extract.py — final: drop chain, call llm.ainvoke() directly</td><td><span class="tag tag-done">✅ Done</span></td></tr>
     <tr><td>All changes pushed to GitHub</td><td><span class="tag tag-done">✅ Done</span></td></tr>
   </table>
 
@@ -155,16 +157,59 @@
   </div>
 
   <div class="task">
-    <div class="task-title">9. Fix extract.py AIMessage crash on Streamlit Cloud <span class="tag tag-done">Done</span></div>
+    <div class="task-title">9. Fix extract.py AIMessage crash on Streamlit Cloud — attempt 1 <span class="tag tag-done">Done</span></div>
     <ul>
       <li><strong>Root cause:</strong> <code>ChatOpenAI.ainvoke()</code> (OpenRouter backend) returns an <code>AIMessage</code> object, not a plain <code>str</code>. <code>_repair_json()</code> called <code>re.sub()</code> on it and crashed with <code>TypeError: expected string or bytes-like object</code>.</li>
-      <li><strong>Fix:</strong> after <code>await chain.ainvoke()</code>, check <code>hasattr(raw_response, "content")</code> — use <code>.content</code> for <code>AIMessage</code>, <code>str()</code> fallback for plain string (Ollama). Both backends now pass a clean string to <code>_repair_json()</code>.</li>
-      <li><strong>pipeline/extract.py</strong> — 7 insertions, 1 deletion</li>
+      <li><strong>Fix (attempt 1):</strong> after <code>await chain.ainvoke()</code>, check <code>hasattr(raw_response, "content")</code> — use <code>.content</code> for <code>AIMessage</code>, <code>str()</code> fallback. Worked but added 7 lines of branching.</li>
+      <li><strong>pipeline/extract.py</strong> — commit <code>9660f7a</code></li>
+    </ul>
+  </div>
+
+  <div class="task">
+    <div class="task-title">10. Fix extract.py — proper fix with StrOutputParser <span class="tag tag-done">Done</span></div>
+    <ul>
+      <li><strong>Why attempt 1 wasn't enough:</strong> the <code>hasattr</code> check could still be bypassed depending on execution order; crash could recur with other LangChain response types.</li>
+      <li><strong>Proper fix:</strong> <code>chain = _PROMPT | llm | StrOutputParser()</code> — official LangChain way to guarantee a plain <code>str</code> from any backend. Runs before our code touches the response.</li>
+      <li>Removed the 8-line <code>hasattr</code> workaround; replaced with 1 import + 1 chain change.</li>
+      <li><strong>pipeline/extract.py</strong> — commit <code>e045c91</code></li>
+    </ul>
+  </div>
+
+  <div class="task">
+    <div class="task-title">11. Fix extract.py — harden _repair_json for Python 3.14 + uvloop <span class="tag tag-done">Done</span></div>
+    <ul>
+      <li><strong>Crash:</strong> Streamlit Cloud (Python 3.14 + uvloop) still hit <code>TypeError</code> inside <code>_repair_json</code> at <code>re.sub()</code> — even with <code>StrOutputParser</code> in the chain.</li>
+      <li><strong>Root cause:</strong> <code>StrOutputParser</code> on <code>langchain-openai==1.3.3</code> + <code>langchain-core==1.4.8</code> does <em>not</em> unwrap <code>AIMessage</code> when called with <code>ainvoke()</code> under uvloop — it passes it through unchanged.</li>
+      <li><strong>Fix (attempt 3):</strong> changed <code>_repair_json(raw: str)</code> → <code>_repair_json(raw: object)</code>, coercing to str as the first step. Still crashed because Streamlit Cloud was caching old code and serving stale versions of extract.py.</li>
+      <li><strong>pipeline/extract.py</strong> — commit <code>f771b86</code></li>
+    </ul>
+  </div>
+
+  <div class="task">
+    <div class="task-title">12. Fix extract.py — final fix: drop chain, call llm.ainvoke() directly <span class="tag tag-done">Done</span></div>
+    <ul>
+      <li><strong>Root cause (confirmed):</strong> <code>StrOutputParser</code> on <code>langchain-openai 1.3.3</code> genuinely does not convert <code>AIMessage → str</code> with <code>ainvoke()</code>. All chain-based approaches fail on this version.</li>
+      <li><strong>Final fix:</strong> dropped <code>StrOutputParser</code> and the LangChain chain entirely. Now calls <code>await llm.ainvoke(prompt_text)</code> directly on the LLM object, then immediately coerces the result with <code>_to_str()</code> — a dedicated helper that handles <code>str</code>, <code>AIMessage</code>, and anything else via <code>.content</code> or <code>str()</code>.</li>
+      <li><code>_repair_json</code> is now a pure string function — it only receives a guaranteed <code>str</code> from <code>_to_str()</code>.</li>
+      <li>Falls back to <code>asyncio.to_thread(llm.invoke, ...)</code> if <code>ainvoke</code> is unavailable.</li>
+      <li><strong>pipeline/extract.py</strong> — 24 insertions, 13 deletions — commit <code>3f5eb9b</code></li>
     </ul>
   </div>
 
   <!-- GIT LOG -->
   <h2>Git Commit History</h2>
+
+  <div class="commit">
+    <span class="commit-hash">3f5eb9b</span> <span class="commit-date">· 2026-07-04 05:15</span>
+    <div class="commit-msg">Fix extract.py: drop chain/StrOutputParser, call llm.ainvoke() directly and coerce with _to_str()</div>
+    <div class="commit-files">pipeline/extract.py — 24 insertions, 13 deletions</div>
+  </div>
+
+  <div class="commit">
+    <span class="commit-hash">f771b86</span> <span class="commit-date">· 2026-07-04 05:00</span>
+    <div class="commit-msg">Fix extract.py: harden _repair_json to coerce any LLM response type to str</div>
+    <div class="commit-files">pipeline/extract.py — 13 insertions, 3 deletions</div>
+  </div>
 
   <div class="commit">
     <span class="commit-hash">e045c91</span> <span class="commit-date">· 2026-07-04 04:50</span>
