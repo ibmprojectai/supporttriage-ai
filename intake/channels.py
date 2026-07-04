@@ -148,7 +148,7 @@ def fetch_unread_emails(
         mail.login(user, app_password)
         mail.select("INBOX")
 
-        _, msg_ids_raw = mail.search(None, "UNSEEN")
+        _, msg_ids_raw = mail.search(None, '(UNSEEN SUBJECT "[SUPPORT-TICKET]")')
         msg_ids = (msg_ids_raw[0] or b"").split()
         # Most recent first, cap at max_emails
         msg_ids = msg_ids[::-1][:max_emails]
