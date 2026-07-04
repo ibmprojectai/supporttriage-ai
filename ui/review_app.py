@@ -20,7 +20,7 @@ import pandas as pd
 import streamlit as st
 
 from guardrails.pii_redactor import redact
-from intake.zendesk_connector import fetch_ticket
+from intake.zendesk_connector import fetch_all_tickets, fetch_ticket
 from pipeline.classify import classify
 from pipeline.draft import draft_reply
 from pipeline.extract import extract
@@ -43,7 +43,7 @@ st.caption(
 )
 
 
-# ── Run pipeline (cached so it only runs once per session) ─────────────────────
+# ── Single-ticket pipeline (cached) ───────────────────────────────────────────
 @st.cache_resource(show_spinner="Running triage pipeline …")
 def run_pipeline():
     async def _run():
@@ -60,16 +60,39 @@ def run_pipeline():
     return asyncio.run(_run())
 
 
-ticket, routing = run_pipeline()
+# ── Batch pipeline — classify + route all 15 tickets (cached) ─────────────────
+@st.cache_resource(show_spinner="Classifying all 15 tickets …")
+def run_batch_pipeline():
+    """Classify and route all 15 mock tickets. Returns list of (ticket, routing) tuples."""
+    async def _run():
+        tickets = fetch_all_tickets()
+        results = []
+        for t in tickets:
+            t.body = redact(t.body)
+            t = await classify(t)
+            routing = route(t)
+            results.append((t, routing))
+        return results
+    return asyncio.run(_run())
 
-# ── Two-tab layout ─────────────────────────────────────────────────────────────
-tab_dash, tab_review = st.tabs(["📊 Dashboard", "🎫 Ticket Review"])
+
+ticket, routing = run_pipeline()
+batch_results = run_batch_pipeline()
+
+# ── Three-tab layout ───────────────────────────────────────────────────────────
+tab_dash, tab_all, tab_review = st.tabs(["📊 Dashboard", "🗂️ All Tickets", "🎫 Ticket Review"])
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# TAB 1 — EXECUTIVE DASHBOARD
+# TAB 1 — EXECUTIVE DASHBOARD (driven by batch data)
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_dash:
+
+    # ── Compute batch stats ────────────────────────────────────────────────────
+    total        = len(batch_results)
+    escalated    = sum(1 for _, r in batch_results if r["escalate"])
+    human_review = sum(1 for _, r in batch_results if r["requires_human_review"])
+    avg_conf     = sum(t.classify_confidence for t, _ in batch_results) / total
 
     # ── Business impact banner ─────────────────────────────────────────────────
     st.markdown("""
@@ -82,19 +105,23 @@ This system reduces misrouting through AI confidence scoring, auto-escalation, a
 </div>
 """, unsafe_allow_html=True)
 
-    # ── Row of 5 KPI metrics ───────────────────────────────────────────────────
+    # ── Row of 5 KPI metrics (real batch numbers) ──────────────────────────────
     m1, m2, m3, m4, m5 = st.columns(5)
-    m1.metric("🎫 Tickets Processed", 1)
-    m2.metric("AI Confidence Score", f"{ticket.classify_confidence:.0%}")
-    m3.metric("Severity Impact", f"{routing['severity_impact']:.1f} / 10")
-    m4.metric("Escalation Status", "Yes" if routing["escalate"] else "No")
+    m1.metric("🎫 Tickets Processed", total)
+    m2.metric("AI Avg Confidence",    f"{avg_conf:.0%}")
+    m3.metric("🚨 Escalated",         escalated)
+    m4.metric("👤 Human Review",       human_review)
     m5.metric("💰 Est. Annual Saving", "$329K")
 
-    # ── Confidence gauge ───────────────────────────────────────────────────────
-    st.subheader("🎯 AI Confidence Gauge")
-    conf = ticket.classify_confidence
+    # ── Confidence gauge (single featured ticket) ──────────────────────────────
+    st.subheader("🎯 AI Confidence Gauge — Featured Ticket")
+    conf  = ticket.classify_confidence
     color = "#42be65" if conf >= 0.8 else "#f1c21b" if conf >= 0.6 else "#fa4d56"
-    label = "High Confidence ✅" if conf >= 0.8 else "Medium Confidence ⚠️" if conf >= 0.6 else "Low Confidence — Human Review Required 🚨"
+    label = (
+        "High Confidence ✅" if conf >= 0.8
+        else "Medium Confidence ⚠️" if conf >= 0.6
+        else "Low Confidence — Human Review Required 🚨"
+    )
     st.markdown(f"""
 <div style='background:#262626;border-radius:12px;padding:1.2rem;margin-bottom:1rem'>
 <div style='display:flex;justify-content:space-between;margin-bottom:0.5rem'>
@@ -111,36 +138,106 @@ This system reduces misrouting through AI confidence scoring, auto-escalation, a
 
     st.divider()
 
-    # ── Ticket volume by category bar chart ───────────────────────────────────
+    # ── Ticket volume by category (real data from batch) ──────────────────────
     st.subheader("📈 Ticket Volume by Category")
-    _volume_data = {
-        "authentication": 12,
-        "billing": 5,
-        "performance": 8,
-        "data-loss": 2,
-        "feature-request": 3,
-    }
-    chart_df = pd.DataFrame.from_dict(
-        _volume_data, orient="index", columns=["Tickets"]
+    from collections import Counter
+    cat_counts = Counter(
+        t.category or "unknown" for t, _ in batch_results
     )
+    chart_df = pd.DataFrame.from_dict(cat_counts, orient="index", columns=["Tickets"])
     chart_df.index.name = "Category"
+    chart_df = chart_df.sort_values("Tickets", ascending=False)
     st.bar_chart(chart_df)
 
     st.divider()
 
-    # ── Outage alerts ─────────────────────────────────────────────────────────
+    # ── Outage alerts (symptoms from all batch tickets) ────────────────────────
     st.subheader("🚨 Outage Alerts")
-    if ticket.symptoms:
-        for symptom in ticket.symptoms:
-            st.warning(
-                f"Potential pattern detected: {symptom} — monitor for recurrence."
-            )
+    all_symptoms = [s for t, _ in batch_results for s in (t.symptoms or [])]
+    if all_symptoms:
+        for symptom in all_symptoms:
+            st.warning(f"Potential pattern detected: {symptom} — monitor for recurrence.")
     else:
-        st.success("No active outage patterns detected.")
+        st.success("No active outage patterns detected across all tickets.")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# TAB 2 — TICKET REVIEW
+# TAB 2 — ALL TICKETS
+# ══════════════════════════════════════════════════════════════════════════════
+with tab_all:
+
+    st.subheader("🗂️ Batch Triage Results — All 15 Tickets")
+    st.caption("AI classification and routing for every ticket in this session.")
+
+    # ── Summary metrics ────────────────────────────────────────────────────────
+    bm1, bm2, bm3, bm4 = st.columns(4)
+    bm1.metric("Total Tickets",  total)
+    bm2.metric("🚨 Escalated",   escalated)
+    bm3.metric("👤 Human Review", human_review)
+    bm4.metric("Avg Confidence", f"{avg_conf:.0%}")
+
+    st.divider()
+
+    # ── Build dataframe ────────────────────────────────────────────────────────
+    rows = []
+    for t, r in batch_results:
+        rows.append({
+            "ID":         t.id,
+            "Subject":    t.subject[:60] + "…" if len(t.subject) > 60 else t.subject,
+            "Category":   t.category or "—",
+            "Priority":   t.priority or "—",
+            "Confidence": f"{t.classify_confidence:.0%}",
+            "Queue":      r["queue"],
+            "Escalate":   "🚨 Yes" if r["escalate"] else "✅ No",
+            "H-Review":   "👤 Yes" if r["requires_human_review"] else "—",
+            "Symptoms":   ", ".join(t.symptoms[:2]) if t.symptoms else "—",
+            # Hidden numeric columns for row colouring
+            "_escalate":  r["escalate"],
+            "_human":     r["requires_human_review"],
+        })
+
+    df = pd.DataFrame(rows)
+
+    # ── Row colour helper ──────────────────────────────────────────────────────
+    def _row_color(row):
+        if row["_escalate"] and not row["_human"]:
+            # Red for hard escalations (critical / data-loss)
+            bg = "background-color: #fff1f1; color: #a2191f"
+        elif row["_human"]:
+            # Yellow for human-review
+            bg = "background-color: #fdf6dd; color: #6c3c00"
+        else:
+            # Green for standard routing
+            bg = "background-color: #defbe6; color: #044317"
+        return [bg] * len(row)
+
+    display_cols = ["ID", "Subject", "Category", "Priority",
+                    "Confidence", "Queue", "Escalate", "H-Review", "Symptoms"]
+
+    styled = (
+        df[display_cols + ["_escalate", "_human"]]
+        .style
+        .apply(_row_color, axis=1)
+        .hide(axis="index")
+    )
+
+    st.dataframe(styled, use_container_width=True, height=560)
+
+    st.divider()
+
+    # ── Category bar chart ─────────────────────────────────────────────────────
+    st.subheader("📊 Tickets per Category")
+    batch_cat_df = (
+        df.groupby("Category")
+        .size()
+        .reset_index(name="Count")
+        .set_index("Category")
+    )
+    st.bar_chart(batch_cat_df)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 3 — TICKET REVIEW (single featured ticket)
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_review:
 
