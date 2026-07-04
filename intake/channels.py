@@ -158,6 +158,8 @@ def fetch_unread_emails(
             raw = data[0]
             if not isinstance(raw, tuple):
                 continue
+            # Mark as read so it doesn't re-appear on next fetch
+            mail.store(mid, "+FLAGS", "\\Seen")
 
             parsed = email_lib.message_from_bytes(raw[1])
             subject = parsed.get("Subject", "(no subject)")

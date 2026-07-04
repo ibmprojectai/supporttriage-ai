@@ -289,27 +289,32 @@ with st.sidebar:
         "text-transform:uppercase;letter-spacing:1px;padding:0 0.5rem'>Channel Status</p>",
         unsafe_allow_html=True,
     )
-    st.markdown(f"""
-<div style='padding:0 0.5rem'>
-  <div style='display:flex;align-items:center;gap:0.5rem;padding:0.25rem 0'>
-    <div style='width:7px;height:7px;border-radius:50%;
-         background:{"#42be65" if tg_connected else "#2a2a2a"};flex-shrink:0'></div>
-    <span style='color:{"#42be65" if tg_connected else "#525252"};font-size:0.8rem'>
-      ✈️ Telegram &nbsp;{"<b>Connected</b>" if tg_connected else "Not configured"}
-    </span>
-  </div>
-  <div style='display:flex;align-items:center;gap:0.5rem;padding:0.25rem 0'>
-    <div style='width:7px;height:7px;border-radius:50%;
-         background:{"#42be65" if gm_connected else "#2a2a2a"};flex-shrink:0'></div>
-    <span style='color:{"#42be65" if gm_connected else "#525252"};font-size:0.8rem'>
-      📧 Gmail &nbsp;{"<b>Connected</b>" if gm_connected else "Not configured"}
-    </span>
-  </div>
-  <div style='display:flex;align-items:center;gap:0.5rem;padding:0.25rem 0'>
-    <div style='width:7px;height:7px;border-radius:50%;background:#42be65;flex-shrink:0'></div>
-    <span style='color:#42be65;font-size:0.8rem'>🌐 Web Form &nbsp;<b>Active</b></span>
-  </div>
-</div>""", unsafe_allow_html=True)
+    _tg_dot   = "#42be65" if tg_connected else "#2a2a2a"
+    _tg_col   = "#42be65" if tg_connected else "#525252"
+    _tg_lbl   = "<b>Connected</b>" if tg_connected else "Not configured"
+    _gm_dot   = "#42be65" if gm_connected else "#2a2a2a"
+    _gm_col   = "#42be65" if gm_connected else "#525252"
+    _gm_lbl   = "<b>Connected</b>" if gm_connected else "Not configured"
+    st.markdown(
+        "<div style='padding:0 0.5rem'>"
+        "<div style='display:flex;align-items:center;gap:0.5rem;padding:0.25rem 0'>"
+        "<div style='width:7px;height:7px;border-radius:50%;background:{tg_dot};flex-shrink:0'></div>"
+        "<span style='color:{tg_col};font-size:0.8rem'>✈️ Telegram &nbsp;{tg_lbl}</span>"
+        "</div>"
+        "<div style='display:flex;align-items:center;gap:0.5rem;padding:0.25rem 0'>"
+        "<div style='width:7px;height:7px;border-radius:50%;background:{gm_dot};flex-shrink:0'></div>"
+        "<span style='color:{gm_col};font-size:0.8rem'>📧 Gmail &nbsp;{gm_lbl}</span>"
+        "</div>"
+        "<div style='display:flex;align-items:center;gap:0.5rem;padding:0.25rem 0'>"
+        "<div style='width:7px;height:7px;border-radius:50%;background:#42be65;flex-shrink:0'></div>"
+        "<span style='color:#42be65;font-size:0.8rem'>🌐 Web Form &nbsp;<b>Active</b></span>"
+        "</div>"
+        "</div>".format(
+            tg_dot=_tg_dot, tg_col=_tg_col, tg_lbl=_tg_lbl,
+            gm_dot=_gm_dot, gm_col=_gm_col, gm_lbl=_gm_lbl,
+        ),
+        unsafe_allow_html=True,
+    )
 
     st.divider()
 
@@ -326,21 +331,27 @@ with st.sidebar:
         "text-transform:uppercase;letter-spacing:1px;padding:0 0.5rem'>Queue Summary</p>",
         unsafe_allow_html=True,
     )
-    st.markdown(f"""
-<div style='padding:0 0.5rem'>
-  <div class='stat-row'>
-    <span style='color:#8d8d8d;font-size:0.8rem'>Inbox</span>
-    <span style='color:#f4f4f4;font-weight:700;font-size:0.88rem'>{inbox_count}</span>
-  </div>
-  <div class='stat-row'>
-    <span style='color:#8d8d8d;font-size:0.8rem'>Awaiting Review</span>
-    <span style='color:{"#f1c21b" if review_count else "#f4f4f4"};font-weight:700;font-size:0.88rem'>{review_count}</span>
-  </div>
-  <div class='stat-row'>
-    <span style='color:#8d8d8d;font-size:0.8rem'>Processed</span>
-    <span style='color:#f4f4f4;font-weight:700;font-size:0.88rem'>{processed_count}</span>
-  </div>
-</div>""", unsafe_allow_html=True)
+    _rc_col = "#f1c21b" if review_count else "#f4f4f4"
+    st.markdown(
+        "<div style='padding:0 0.5rem'>"
+        "<div class='stat-row'>"
+        "<span style='color:#8d8d8d;font-size:0.8rem'>Inbox</span>"
+        "<span style='color:#f4f4f4;font-weight:700;font-size:0.88rem'>{inbox}</span>"
+        "</div>"
+        "<div class='stat-row'>"
+        "<span style='color:#8d8d8d;font-size:0.8rem'>Awaiting Review</span>"
+        "<span style='color:{rc_col};font-weight:700;font-size:0.88rem'>{review}</span>"
+        "</div>"
+        "<div class='stat-row'>"
+        "<span style='color:#8d8d8d;font-size:0.8rem'>Processed</span>"
+        "<span style='color:#f4f4f4;font-weight:700;font-size:0.88rem'>{processed}</span>"
+        "</div>"
+        "</div>".format(
+            inbox=inbox_count, rc_col=_rc_col,
+            review=review_count, processed=processed_count,
+        ),
+        unsafe_allow_html=True,
+    )
 
     st.divider()
 
@@ -591,22 +602,28 @@ if page == "📥 Inbox":
             for e in t.error_codes
         ) if t.error_codes else ""
 
-        st.markdown(f"""
-<div class='inbox-card inbox-card-{ch}'>
-  <span style='font-size:1.1rem;flex-shrink:0;padding-top:3px;opacity:0.85'>{icon}</span>
-  <div style='flex:1;min-width:0'>
-    <div style='display:flex;align-items:center;gap:0.5rem;margin-bottom:0.15rem;flex-wrap:wrap'>
-      <span style='color:#525252;font-size:0.72rem;font-family:monospace'>{id_safe}</span>
-      <span style='color:{color};font-size:0.72rem;font-weight:700'>{ch.upper()}</span>
-      <span style='color:#525252;font-size:0.72rem'>{sender_safe}</span>
-      {errs}
-    </div>
-    <div style='color:#e8e8e8;font-weight:600;font-size:0.88rem;margin-bottom:0.15rem;
-         white-space:nowrap;overflow:hidden;text-overflow:ellipsis'>{subject_safe}</div>
-    <div style='color:#525252;font-size:0.78rem;line-height:1.4'>{preview_safe}</div>
-  </div>
-  <span class='badge badge-untriaged' style='flex-shrink:0;margin-top:3px'>UNTRIAGED</span>
-</div>""", unsafe_allow_html=True)
+        card_html = (
+            "<div class='inbox-card inbox-card-{ch}'>"
+            "<span style='font-size:1.1rem;flex-shrink:0;padding-top:3px;opacity:0.85'>{icon}</span>"
+            "<div style='flex:1;min-width:0'>"
+            "<div style='display:flex;align-items:center;gap:0.5rem;margin-bottom:0.15rem;flex-wrap:wrap'>"
+            "<span style='color:#525252;font-size:0.72rem;font-family:monospace'>{tid}</span>"
+            "<span style='color:{color};font-size:0.72rem;font-weight:700'>{chan}</span>"
+            "<span style='color:#525252;font-size:0.72rem'>{sender}</span>"
+            "{errs}"
+            "</div>"
+            "<div style='color:#e8e8e8;font-weight:600;font-size:0.88rem;margin-bottom:0.15rem;"
+            "white-space:nowrap;overflow:hidden;text-overflow:ellipsis'>{subject}</div>"
+            "<div style='color:#525252;font-size:0.78rem;line-height:1.4'>{preview}</div>"
+            "</div>"
+            "<span class='badge badge-untriaged' style='flex-shrink:0;margin-top:3px'>UNTRIAGED</span>"
+            "</div>"
+        ).format(
+            ch=ch, icon=icon, tid=id_safe, color=color,
+            chan=ch.upper(), sender=sender_safe, errs=errs,
+            subject=subject_safe, preview=preview_safe,
+        )
+        st.markdown(card_html, unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
@@ -707,26 +724,29 @@ HITL routing holds low-confidence tickets for agent review: only confidence &gt;
 
     # ── Confidence gauge ───────────────────────────────────────────────────────
     conf_color = "#42be65" if avg_conf > 0.85 else "#f1c21b" if avg_conf >= 0.6 else "#fa4d56"
-    st.markdown(f"""
-<div style='background:#161616;border-radius:10px;padding:1rem 1.3rem;
-     margin-bottom:1rem;border:1px solid #222'>
-  <div style='display:flex;justify-content:space-between;margin-bottom:0.4rem'>
-    <span style='color:#c6c6c6;font-size:0.82rem;font-weight:600'>
-      Average Classification Confidence
-    </span>
-    <span style='color:{conf_color};font-size:1.15rem;font-weight:700'>{avg_conf:.0%}</span>
-  </div>
-  <div style='position:relative;background:#222;border-radius:4px;height:10px;width:100%'>
-    <div style='background:{conf_color};border-radius:4px;height:10px;
-         width:{avg_conf*100:.0f}%'></div>
-    <div style='position:absolute;top:-2px;left:85%;width:1px;height:14px;
-         background:#fa4d56;opacity:0.8'></div>
-  </div>
-  <div style='display:flex;justify-content:space-between;margin-top:4px'>
-    <small style='color:{conf_color};font-size:0.72rem'>{avg_conf:.0%} batch average</small>
-    <small style='color:#fa4d56;font-size:0.72rem'>▲ 85% auto-route threshold</small>
-  </div>
-</div>""", unsafe_allow_html=True)
+    _conf_pct = "{:.0%}".format(avg_conf)
+    _conf_bar = "{:.0f}".format(avg_conf * 100)
+    st.markdown(
+        "<div style='background:#161616;border-radius:10px;padding:1rem 1.3rem;"
+        "margin-bottom:1rem;border:1px solid #222'>"
+        "<div style='display:flex;justify-content:space-between;margin-bottom:0.4rem'>"
+        "<span style='color:#c6c6c6;font-size:0.82rem;font-weight:600'>"
+        "Average Classification Confidence"
+        "</span>"
+        "<span style='color:{cc};font-size:1.15rem;font-weight:700'>{pct}</span>"
+        "</div>"
+        "<div style='position:relative;background:#222;border-radius:4px;height:10px;width:100%'>"
+        "<div style='background:{cc};border-radius:4px;height:10px;width:{bar}%'></div>"
+        "<div style='position:absolute;top:-2px;left:85%;width:1px;height:14px;"
+        "background:#fa4d56;opacity:0.8'></div>"
+        "</div>"
+        "<div style='display:flex;justify-content:space-between;margin-top:4px'>"
+        "<small style='color:{cc};font-size:0.72rem'>{pct} batch average</small>"
+        "<small style='color:#fa4d56;font-size:0.72rem'>▲ 85% auto-route threshold</small>"
+        "</div>"
+        "</div>".format(cc=conf_color, pct=_conf_pct, bar=_conf_bar),
+        unsafe_allow_html=True,
+    )
 
     st.divider()
 
@@ -766,27 +786,34 @@ HITL routing holds low-confidence tickets for agent review: only confidence &gt;
         symptom_safe = _html.escape(symptom)
         if count >= 3:
             outage_found = True
-            st.markdown(f"""<div class='outage-critical'>
-<div style='font-size:0.95rem;font-weight:700;color:#ff8389;margin-bottom:0.35rem'>
-  🚨 SYSTEMIC OUTAGE DETECTED
-</div>
-<div style='color:#f4f4f4;font-size:0.88rem;margin-bottom:0.25rem'>
-  <b>{count} users</b> reporting <b>"{symptom_safe}"</b> across {ch_str}
-</div>
-<div style='color:#6f6f6f;font-size:0.78rem;margin-bottom:0.3rem'>{ids_html}</div>
-<div style='color:#ff8389;font-size:0.78rem;font-weight:600'>
-  ⚡ Escalate to engineering immediately.
-</div>
-</div>""", unsafe_allow_html=True)
+            st.markdown(
+                "<div class='outage-critical'>"
+                "<div style='font-size:0.95rem;font-weight:700;color:#ff8389;margin-bottom:0.35rem'>"
+                "🚨 SYSTEMIC OUTAGE DETECTED"
+                "</div>"
+                "<div style='color:#f4f4f4;font-size:0.88rem;margin-bottom:0.25rem'>"
+                "<b>{count} users</b> reporting <b>&quot;{symptom}&quot;</b> across {ch_str}"
+                "</div>"
+                "<div style='color:#6f6f6f;font-size:0.78rem;margin-bottom:0.3rem'>{ids}</div>"
+                "<div style='color:#ff8389;font-size:0.78rem;font-weight:600'>"
+                "⚡ Escalate to engineering immediately."
+                "</div>"
+                "</div>".format(count=count, symptom=symptom_safe, ch_str=ch_str, ids=ids_html),
+                unsafe_allow_html=True,
+            )
         elif count == 2:
-            st.markdown(f"""<div class='outage-warning'>
-<span style='color:#f5d87c;font-weight:700;font-size:0.85rem'>⚠️ Pattern emerging</span>
-&nbsp;&nbsp;
-<span style='color:#c6c6c6;font-size:0.82rem'><b>{count} tickets</b> reporting
-<b>"{symptom_safe}"</b> — {ch_str}</span>
-&nbsp;
-<span style='color:#525252;font-size:0.78rem'>Monitor for further reports.</span>
-</div>""", unsafe_allow_html=True)
+            st.markdown(
+                "<div class='outage-warning'>"
+                "<span style='color:#f5d87c;font-weight:700;font-size:0.85rem'>⚠️ Pattern emerging</span>"
+                "&nbsp;&nbsp;"
+                "<span style='color:#c6c6c6;font-size:0.82rem'>"
+                "<b>{count} tickets</b> reporting <b>&quot;{symptom}&quot;</b> — {ch_str}"
+                "</span>"
+                "&nbsp;"
+                "<span style='color:#525252;font-size:0.78rem'>Monitor for further reports.</span>"
+                "</div>".format(count=count, symptom=symptom_safe, ch_str=ch_str),
+                unsafe_allow_html=True,
+            )
 
     if not outage_found and not any(len(v) >= 2 for v in symptom_tickets.values()):
         st.success("✅ No outage patterns detected in current batch.")
