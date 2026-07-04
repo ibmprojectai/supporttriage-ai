@@ -70,6 +70,7 @@
     <tr><td>Multi-channel rebuild: Email + Twitter + Chat inbox, Outage Radar, System Logs</td><td><span class="tag tag-done">✅ Done</span></td></tr>
     <tr><td>Real product rebuild: HITL routing (0.85 threshold), Telegram/Gmail connectors, systemic outage radar</td><td><span class="tag tag-done">✅ Done</span></td></tr>
     <tr><td>Fix SyntaxError: escaped quotes in f-strings rejected by Python 3.14 on Streamlit Cloud</td><td><span class="tag tag-done">✅ Done</span></td></tr>
+    <tr><td>Final submission: README rewrite + 3 Bob session log markdown files</td><td><span class="tag tag-done">✅ Done</span></td></tr>
   </table>
 
   <!-- TASKS -->
@@ -266,6 +267,17 @@
   </div>
 
   <div class="task">
+    <div class="task-title">25. Final Submission — README Rewrite + Bob Session Log Exports <span class="tag tag-done">Done</span></div>
+    <ul>
+      <li><strong>README.md</strong> — complete rewrite with Business Impact table, tree-structured architecture diagram, HITL routing logic block, Telegram setup guide (5 steps), full environment variables table, pytest invocation</li>
+      <li><strong>bob_sessions/session-hitl-routing.md</strong> — documents the three-tier HITL routing engine: escalated / human-review / auto-routed thresholds, <code>status</code> field on Ticket, confidence gauge threshold marker, agent approval flow</li>
+      <li><strong>bob_sessions/session-telegram-connector.md</strong> — documents <code>fetch_telegram_updates()</code> implementation: getUpdates polling, offset tracking, Ticket parsing, sidebar UI, channel colour coding</li>
+      <li><strong>bob_sessions/session-outage-radar.md</strong> — documents symptom extraction in pipeline, seed tickets guaranteeing ≥3 ERR-5001 matches across channels, radar logic (≥3 = SYSTEMIC OUTAGE, ==2 = pattern emerging), UI rendering in dashboard tab</li>
+      <li>commit <code>3d6519c</code></li>
+    </ul>
+  </div>
+
+  <div class="task">
     <div class="task-title">24. Fix SyntaxError — Escaped Quotes in f-strings (Python 3.14) <span class="tag tag-done">Done</span></div>
     <div class="warn">⚠️ Streamlit Cloud (Python 3.14.6) raised <code>SyntaxError: unexpected character after line continuation character</code> at <code>ui/review_app.py:326</code>. Python 3.14 enforces stricter f-string parsing — backslash escapes (<code>\"</code>) inside f-string expressions are a syntax error.</div>
     <ul>
@@ -333,6 +345,12 @@
 
   <!-- GIT LOG -->
   <h2>Git Commit History</h2>
+
+  <div class="commit">
+    <span class="commit-hash">3d6519c</span> <span class="commit-date">· 2026-07-04 12:00</span>
+    <div class="commit-msg">Final submission: rewrite README, add 3 Bob session logs (HITL routing, Telegram connector, Outage Radar)</div>
+    <div class="commit-files">README.md · bob_sessions/session-hitl-routing.md (new) · bob_sessions/session-telegram-connector.md (new) · bob_sessions/session-outage-radar.md (new) — 195 insertions, 55 deletions</div>
+  </div>
 
   <div class="commit">
     <span class="commit-hash">0046af4</span> <span class="commit-date">· 2026-07-04 11:30</span>
