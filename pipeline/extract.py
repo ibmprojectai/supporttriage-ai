@@ -72,8 +72,14 @@ async def extract(ticket: Ticket) -> Ticket:
     chain = _PROMPT | llm
 
     t0 = time.perf_counter()
-    response: str = await chain.ainvoke({"body": ticket.body})
+    raw_response = await chain.ainvoke({"body": ticket.body})
     elapsed = time.perf_counter() - t0
+
+    # Handle both plain string (OllamaLLM) and AIMessage (ChatOpenAI/OpenRouter)
+    if hasattr(raw_response, "content"):
+        response = raw_response.content
+    else:
+        response = str(raw_response)
 
     try:
         clean = _repair_json(response)
