@@ -261,8 +261,55 @@
     </ul>
   </div>
 
+  <div class="task">
+    <div class="task-title">20. Fix ImportError: force .pyc cache-bust on zendesk_connector.py <span class="tag tag-done">Done</span></div>
+    <div class="warn">⚠️ Streamlit Cloud raised <code>ImportError: cannot import name 'fetch_all_tickets'</code> despite the function existing in GitHub source — a stale <code>.pyc</code> bytecode cache was serving the old module.</div>
+    <ul>
+      <li><strong>Root cause:</strong> Python loaded a cached <code>.pyc</code> compiled from the old <code>zendesk_connector.py</code> before <code>fetch_all_tickets</code> was added. The <code>.pyc</code> shadowed the updated source until a mtime change forced recompilation.</li>
+      <li><strong>Fix 1:</strong> Updated module docstring to include <em>"Exports: fetch_ticket, fetch_all_tickets"</em> — changes the file's mtime, triggers <code>.pyc</code> invalidation.</li>
+      <li><strong>Fix 2:</strong> Added <code>__all__ = ["fetch_ticket", "fetch_all_tickets"]</code> — makes exports explicit and unambiguous.</li>
+      <li><strong>intake/zendesk_connector.py</strong> — commit <code>21481d7</code></li>
+    </ul>
+  </div>
+
   <!-- GIT LOG -->
   <h2>Git Commit History</h2>
+
+  <div class="commit">
+    <span class="commit-hash">06b1825</span> <span class="commit-date">· 2026-07-04 08:35</span>
+    <div class="commit-msg">Update session log: Task 20 (ImportError cache-bust fix)</div>
+    <div class="commit-files">bob_sessions/session-2026-07-04.html — 1 insertion</div>
+  </div>
+
+  <div class="commit">
+    <span class="commit-hash">21481d7</span> <span class="commit-date">· 2026-07-04 08:30</span>
+    <div class="commit-msg">Force cache-bust: add __all__ and docstring note to zendesk_connector.py</div>
+    <div class="commit-files">intake/zendesk_connector.py — 3 insertions, 1 deletion</div>
+  </div>
+
+  <div class="commit">
+    <span class="commit-hash">07e7864</span> <span class="commit-date">· 2026-07-04 08:10</span>
+    <div class="commit-msg">Update session log: Task 18 (64 real tests) + Task 19 (15-ticket batch triage)</div>
+    <div class="commit-files">bob_sessions/session-2026-07-04.html — 5 insertions, 1 deletion</div>
+  </div>
+
+  <div class="commit">
+    <span class="commit-hash">a635556</span> <span class="commit-date">· 2026-07-04 08:00</span>
+    <div class="commit-msg">Add 15-ticket batch triage view with color-coded results table</div>
+    <div class="commit-files">intake/zendesk_connector.py · ui/review_app.py — 382 insertions, 33 deletions</div>
+  </div>
+
+  <div class="commit">
+    <span class="commit-hash">c4b6a3a</span> <span class="commit-date">· 2026-07-04 07:40</span>
+    <div class="commit-msg">Replace with 64 real-logic tests: exact assertions, arithmetic, LLM response parsing, boundary values, fallback paths</div>
+    <div class="commit-files">tests/test_pipeline.py — 466 insertions, 162 deletions</div>
+  </div>
+
+  <div class="commit">
+    <span class="commit-hash">11f7234</span> <span class="commit-date">· 2026-07-04 07:30</span>
+    <div class="commit-msg">Add 50+ parametrized unit tests covering PII, routing, models, classify, extract</div>
+    <div class="commit-files">tests/test_pipeline.py · tests/__init__.py — 123 insertions</div>
+  </div>
 
   <div class="commit">
     <span class="commit-hash">2329838</span> <span class="commit-date">· 2026-07-04 07:25</span>
@@ -455,9 +502,9 @@
     <tr><td><code>pytest.ini</code></td><td>New — <code>testpaths = tests</code></td></tr>
     <tr><td><code>.devcontainer/devcontainer.json</code></td><td>Added by Streamlit Cloud auto-setup</td></tr>
     <tr><td><code>ui/review_app.py</code></td><td>AI confidence gauge — colour-coded progress bar, dynamic label, dark card</td></tr>
-    <tr><td><code>intake/zendesk_connector.py</code></td><td>New <code>fetch_all_tickets()</code> — 15 realistic mock tickets covering all categories</td></tr>
+    <tr><td><code>intake/zendesk_connector.py</code></td><td>New <code>fetch_all_tickets()</code> — 15 tickets; <code>__all__</code> + docstring cache-bust (commit <code>21481d7</code>)</td></tr>
     <tr><td><code>tests/test_pipeline.py</code></td><td>64 real-logic tests: arithmetic, live LLM parsing, boundary values, fallback paths</td></tr>
-    <tr><td><code>bob_sessions/session-2026-07-04.html</code></td><td>This session log — updated through Task 19, commit a635556</td></tr>
+    <tr><td><code>bob_sessions/session-2026-07-04.html</code></td><td>This session log — updated through Task 20, commit 06b1825</td></tr>
   </table>
 
   <!-- ENV -->
