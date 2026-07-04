@@ -226,9 +226,21 @@
   <h2>Git Commit History</h2>
 
   <div class="commit">
+    <span class="commit-hash">3695ccd</span> <span class="commit-date">· 2026-07-04 06:20</span>
+    <div class="commit-msg">Update session log with Task 14 (root cause: retire get_llm, belt-and-suspenders coercion)</div>
+    <div class="commit-files">bob_sessions/session-2026-07-04.html — 25 insertions</div>
+  </div>
+
+  <div class="commit">
     <span class="commit-hash">e4e1659</span> <span class="commit-date">· 2026-07-04 06:10</span>
     <div class="commit-msg">Fix AIMessage crash: retire get_llm() ChatOpenAI, add belt-and-suspenders str coercion in extract.py</div>
     <div class="commit-files">watsonx_config.py · pipeline/extract.py — 25 insertions, 41 deletions</div>
+  </div>
+
+  <div class="commit">
+    <span class="commit-hash">b0bf328</span> <span class="commit-date">· 2026-07-04 05:50</span>
+    <div class="commit-msg">Update session log with Task 13 (definitive extract.py fix: remove LangChain, use get_model())</div>
+    <div class="commit-files">bob_sessions/session-2026-07-04.html — 25 insertions</div>
   </div>
 
   <div class="commit">
@@ -355,22 +367,22 @@
   <h2>All Files Modified This Session</h2>
   <table>
     <tr><th>File</th><th>Changes</th></tr>
-    <tr><td><code>watsonx_config.py</code></td><td>Ollama backend kept intact; new <code>_OpenRouterModel</code> class; dual-backend <code>get_model()</code> / <code>get_llm()</code></td></tr>
+    <tr><td><code>watsonx_config.py</code></td><td>Ollama backend; <code>_OpenRouterModel</code>; <code>get_model()</code>; <code>get_llm()</code> retired to 1-line shim returning <code>get_model()</code></td></tr>
     <tr><td><code>requirements.txt</code></td><td>Dropped ibm-watsonx-ai; added langchain-ollama, pandas&gt;=1.5, langchain-openai&gt;=0.1</td></tr>
     <tr><td><code>.env.example</code></td><td>OLLAMA_* vars + OPENROUTER_API_KEY placeholder (no real key)</td></tr>
     <tr><td><code>.streamlit/config.toml</code></td><td>New — headless server + IBM Carbon dark theme</td></tr>
     <tr><td><code>README.md</code></td><td>Full rewrite for IBM AI Builders Challenge submission</td></tr>
     <tr><td><code>models.py</code></td><td>Added symptoms, confidence_extract, confidence_classify, classify_confidence, requires_human_review</td></tr>
     <tr><td><code>pipeline/classify.py</code></td><td>Confidence score in prompt; async; asyncio.to_thread; logging</td></tr>
-    <tr><td><code>pipeline/extract.py</code></td><td>Symptoms + confidence; _repair_json(); async; chain.ainvoke(); logging</td></tr>
+    <tr><td><code>pipeline/extract.py</code></td><td>LangChain fully removed; uses <code>get_model().generate_text()</code> via <code>asyncio.to_thread</code>; <code>_repair_json()</code> coerces any type to str; belt-and-suspenders coercion in <code>extract()</code></td></tr>
     <tr><td><code>pipeline/summarize.py</code></td><td>Async; asyncio.to_thread; timing + logging</td></tr>
     <tr><td><code>pipeline/draft.py</code></td><td>Metadata-filtered RAG; anti-hallucination guard; async; asyncio.to_thread</td></tr>
     <tr><td><code>rag/store.py</code></td><td>Seed docs with category+product metadata; where filter in retrieve()</td></tr>
     <tr><td><code>routing/router.py</code></td><td>Confidence threshold → human-review; severity_impact score; sets ticket.requires_human_review</td></tr>
     <tr><td><code>app.py</code></td><td>Full async with asyncio.run(); direct await calls; structured logging</td></tr>
     <tr><td><code>ui/review_app.py</code></td><td>Two-tab layout; executive dashboard with KPIs, bar chart, outage alerts; async pipeline</td></tr>
-    <tr><td><code>pipeline/extract.py</code></td><td>AIMessage fix: unwrap <code>.content</code> from ChatOpenAI response before passing to <code>_repair_json()</code></td></tr>
-    <tr><td><code>bob_sessions/session-2026-07-04.html</code></td><td>This session log file</td></tr>
+    <tr><td><code>.devcontainer/devcontainer.json</code></td><td>Added by Streamlit Cloud auto-setup</td></tr>
+    <tr><td><code>bob_sessions/session-2026-07-04.html</code></td><td>This session log — updated through Task 14, commit 3695ccd</td></tr>
   </table>
 
   <!-- ENV -->
