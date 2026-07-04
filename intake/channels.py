@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import email as email_lib
 import imaplib
+import os
 import uuid
 from typing import Any
 
@@ -129,9 +130,10 @@ def fetch_unread_emails(
     app_password: str = "",
     max_emails: int = 20,
 ) -> list[Ticket]:
-    """Fetch unread emails from Gmail via IMAP and return them as Ticket objects.
+    """Fetch unread emails via IMAP and return them as Ticket objects.
 
-    Uses Gmail's IMAP endpoint (imap.gmail.com:993).
+    The IMAP server is read from the environment variable IMAP_SERVER
+    (default: "imap.gmail.com").  Port is always 993 (SSL).
     Requires an App Password (not the account password) when 2FA is enabled.
 
     Returns an empty list if credentials are not provided.
@@ -139,9 +141,10 @@ def fetch_unread_emails(
     if not user or not app_password:
         return []
 
+    imap_server = os.environ.get("IMAP_SERVER", "imap.gmail.com")
     tickets: list[Ticket] = []
     try:
-        mail = imaplib.IMAP4_SSL("imap.gmail.com", 993)
+        mail = imaplib.IMAP4_SSL(imap_server, 993)
         mail.login(user, app_password)
         mail.select("INBOX")
 
