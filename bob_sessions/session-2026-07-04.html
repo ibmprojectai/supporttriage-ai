@@ -61,6 +61,7 @@
     <tr><td>Root cause: retire get_llm() ChatOpenAI; belt-and-suspenders str coercion</td><td><span class="tag tag-done">✅ Done</span></td></tr>
     <tr><td>Business impact banner + ROI metric on dashboard</td><td><span class="tag tag-done">✅ Done</span></td></tr>
     <tr><td>10 unit tests — pytest, guardrails, routing, models, classify</td><td><span class="tag tag-done">✅ Done</span></td></tr>
+    <tr><td>AI confidence gauge on dashboard (colour-coded progress bar)</td><td><span class="tag tag-done">✅ Done</span></td></tr>
     <tr><td>All changes pushed to GitHub</td><td><span class="tag tag-done">✅ Done</span></td></tr>
   </table>
 
@@ -247,8 +248,30 @@
     </ul>
   </div>
 
+  <div class="task">
+    <div class="task-title">17. AI Confidence Gauge on Dashboard <span class="tag tag-done">Done</span></div>
+    <ul>
+      <li>Added after the metrics row in the 📊 Dashboard tab</li>
+      <li>Dark card (<code>#262626</code>) with a colour-coded progress bar: green ≥ 80%, yellow ≥ 60%, red &lt; 60%</li>
+      <li>Percentage label and status text (<em>High / Medium / Low Confidence</em>) update dynamically from <code>ticket.classify_confidence</code></li>
+      <li><strong>ui/review_app.py</strong> — 19 insertions — commit <code>2329838</code></li>
+    </ul>
+  </div>
+
   <!-- GIT LOG -->
   <h2>Git Commit History</h2>
+
+  <div class="commit">
+    <span class="commit-hash">2329838</span> <span class="commit-date">· 2026-07-04 07:25</span>
+    <div class="commit-msg">Add AI confidence gauge to dashboard tab</div>
+    <div class="commit-files">ui/review_app.py — 19 insertions</div>
+  </div>
+
+  <div class="commit">
+    <span class="commit-hash">df84c4d</span> <span class="commit-date">· 2026-07-04 07:15</span>
+    <div class="commit-msg">Update session log: Task 15 (dashboard banner) + Task 16 (unit tests)</div>
+    <div class="commit-files">bob_sessions/session-2026-07-04.html — 47 insertions, 1 deletion</div>
+  </div>
 
   <div class="commit">
     <span class="commit-hash">596e39e</span> <span class="commit-date">· 2026-07-04 07:10</span>
@@ -428,7 +451,8 @@
     <tr><td><code>tests/test_pipeline.py</code></td><td>10 pytest unit tests — guardrails, routing, models, classify stub mode</td></tr>
     <tr><td><code>pytest.ini</code></td><td>New — <code>testpaths = tests</code></td></tr>
     <tr><td><code>.devcontainer/devcontainer.json</code></td><td>Added by Streamlit Cloud auto-setup</td></tr>
-    <tr><td><code>bob_sessions/session-2026-07-04.html</code></td><td>This session log — updated through Task 16, commit 596e39e</td></tr>
+    <tr><td><code>ui/review_app.py</code></td><td>AI confidence gauge — colour-coded progress bar, dynamic label, dark card</td></tr>
+    <tr><td><code>bob_sessions/session-2026-07-04.html</code></td><td>This session log — updated through Task 17, commit 2329838</td></tr>
   </table>
 
   <!-- ENV -->
