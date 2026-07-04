@@ -66,6 +66,7 @@
     <tr><td>15-ticket batch triage view — colour-coded table, real dashboard stats</td><td><span class="tag tag-done">✅ Done</span></td></tr>
     <tr><td>Fix ImportError: force .pyc cache-bust on zendesk_connector.py</td><td><span class="tag tag-done">✅ Done</span></td></tr>
     <tr><td>All changes pushed to GitHub</td><td><span class="tag tag-done">✅ Done</span></td></tr>
+    <tr><td>4-tab IBM Carbon UI rebuild (Try It Live, All Tickets, Dashboard, Ticket Review)</td><td><span class="tag tag-done">✅ Done</span></td></tr>
   </table>
 
   <!-- TASKS -->
@@ -262,6 +263,20 @@
   </div>
 
   <div class="task">
+    <div class="task-title">21. Complete UI Rebuild — 4-Tab IBM Carbon Design System <span class="tag tag-done">Done</span></div>
+    <ul>
+      <li><strong>ui/review_app.py</strong> — full rewrite: 560 lines, IBM Carbon dark theme (<code>#161616</code> bg, <code>#0f62fe</code> accent)</li>
+      <li>Global CSS injected via <code>st.markdown()</code>: metric cards, tabs, badges, ticket-row cards with priority left-borders, confidence bars</li>
+      <li><strong>Tab 1 ⚡ Try It Live</strong> — 3 quick-fill buttons (Auth / Billing / Performance) pre-populate subject+body via <code>st.session_state</code>; form with subject, body, product selectbox, account ID; runs full pipeline on submit (<code>asyncio.run(_triage())</code>); result banner (red/yellow/green); two-column results with badges, confidence bar, symptoms, queue, severity, tags, AI summary, editable draft, Approve button</li>
+      <li><strong>Tab 2 🗂️ All Tickets</strong> — custom HTML ticket-row cards per ticket with priority-coloured left border, category and priority badges, confidence bar, queue, severity impact, error codes; bar chart of categories below</li>
+      <li><strong>Tab 3 📊 Dashboard</strong> — gradient business impact banner (#0f62fe → #0043ce); 4 KPI metrics (total, escalated %, human-review %, annual saving); batch-average confidence gauge (colour-coded 22px bar); ticket volume bar chart; outage alerts via deduplicated symptoms</li>
+      <li><strong>Tab 4 🎫 Ticket Review</strong> — preserved existing two-column layout with symptoms and severity_impact additions; unique widget keys to avoid DuplicateWidgetID errors</li>
+      <li>Renamed <code>run_batch_pipeline()</code> → <code>run_batch()</code>; batch stats computed once as module-level vars (<code>_total</code>, <code>_escalated</code>, <code>_human_review</code>, <code>_avg_conf</code>) shared across all tabs</li>
+      <li>commit <code>7a72c5d</code></li>
+    </ul>
+  </div>
+
+  <div class="task">
     <div class="task-title">20. Fix ImportError: force .pyc cache-bust on zendesk_connector.py <span class="tag tag-done">Done</span></div>
     <div class="warn">⚠️ Streamlit Cloud raised <code>ImportError: cannot import name 'fetch_all_tickets'</code> despite the function existing in GitHub source — a stale <code>.pyc</code> bytecode cache was serving the old module.</div>
     <ul>
@@ -274,6 +289,18 @@
 
   <!-- GIT LOG -->
   <h2>Git Commit History</h2>
+
+  <div class="commit">
+    <span class="commit-hash">7a72c5d</span> <span class="commit-date">· 2026-07-04 09:15</span>
+    <div class="commit-msg">Complete UI rebuild: live triage, all-tickets wall, real dashboard, IBM design system</div>
+    <div class="commit-files">ui/review_app.py — 434 insertions, 161 deletions</div>
+  </div>
+
+  <div class="commit">
+    <span class="commit-hash">9514991</span> <span class="commit-date">· 2026-07-04 08:40</span>
+    <div class="commit-msg">Update session log: Task 20 + commits added to history</div>
+    <div class="commit-files">bob_sessions/session-2026-07-04.html — 3 insertions, 2 deletions</div>
+  </div>
 
   <div class="commit">
     <span class="commit-hash">06b1825</span> <span class="commit-date">· 2026-07-04 08:35</span>
