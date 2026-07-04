@@ -9,6 +9,7 @@ Launch:
 
 from __future__ import annotations
 
+import asyncio
 import sys
 import os
 
@@ -44,16 +45,18 @@ st.caption(
 # ── Run pipeline (cached so it only runs once per session) ─────────────────────
 @st.cache_resource(show_spinner="Running triage pipeline …")
 def run_pipeline():
-    ticket = fetch_ticket("mock")
-    ticket.body = redact(ticket.body)
-    ticket.thread = [redact(msg) for msg in ticket.thread]
-    ticket = classify(ticket)
-    ticket = extract(ticket)
-    ticket = summarize(ticket)
-    collection = init_store()
-    ticket = draft_reply(ticket, collection)
-    routing = route(ticket)
-    return ticket, routing
+    async def _run():
+        ticket = fetch_ticket("mock")
+        ticket.body = redact(ticket.body)
+        ticket.thread = [redact(msg) for msg in ticket.thread]
+        ticket = await classify(ticket)
+        ticket = await extract(ticket)
+        ticket = await summarize(ticket)
+        collection = init_store()
+        ticket = await draft_reply(ticket, collection)
+        routing = route(ticket)
+        return ticket, routing
+    return asyncio.run(_run())
 
 
 ticket, routing = run_pipeline()

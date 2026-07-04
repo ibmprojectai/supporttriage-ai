@@ -10,6 +10,7 @@ Stub mode:  returns a placeholder string that still shows retrieved RAG context.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 
@@ -48,7 +49,7 @@ def _build_prompt(context: str, ticket: Ticket) -> str:
     )
 
 
-def draft_reply(ticket: Ticket, collection: Collection) -> Ticket:
+async def draft_reply(ticket: Ticket, collection: Collection) -> Ticket:
     """Generate a RAG-grounded draft reply for *ticket*.
 
     Step 1 — retrieve: query ChromaDB filtered by ticket category + product.
@@ -98,7 +99,7 @@ def draft_reply(ticket: Ticket, collection: Collection) -> Ticket:
 
     t0 = time.perf_counter()
     prompt = f"{_SYSTEM}\n\n{_build_prompt(context_text, ticket)}"
-    response: str = model.generate_text(prompt=prompt)
+    response: str = await asyncio.to_thread(model.generate_text, prompt)
     elapsed = time.perf_counter() - t0
 
     ticket.draft_reply = response.strip()

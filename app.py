@@ -46,7 +46,6 @@ log = logging.getLogger(__name__)
 
 
 async def run_pipeline_async(ticket_id: str = "mock") -> None:
-    loop = asyncio.get_running_loop()
     t_start = time.perf_counter()
 
     print("=" * 60)
@@ -55,7 +54,7 @@ async def run_pipeline_async(ticket_id: str = "mock") -> None:
 
     # ── 1. Intake ──────────────────────────────────────────────────
     print("\n[1/7] Fetching ticket …")
-    ticket = await loop.run_in_executor(None, fetch_ticket, ticket_id)
+    ticket = await asyncio.to_thread(fetch_ticket, ticket_id)
     log.info("[intake] id=%r subject=%r", ticket.id, ticket.subject)
     print(f"      id={ticket.id!r}  subject={ticket.subject!r}")
 
@@ -68,7 +67,7 @@ async def run_pipeline_async(ticket_id: str = "mock") -> None:
 
     # ── 3. Classify ────────────────────────────────────────────────
     print("\n[3/7] Classifying ticket …")
-    ticket = await loop.run_in_executor(None, classify, ticket)
+    ticket = await classify(ticket)
     print(
         f"      category={ticket.category!r}  priority={ticket.priority!r}"
         f"  confidence={ticket.confidence_classify:.2f}"
@@ -76,7 +75,7 @@ async def run_pipeline_async(ticket_id: str = "mock") -> None:
 
     # ── 4. Extract ─────────────────────────────────────────────────
     print("\n[4/7] Extracting fields …")
-    ticket = await loop.run_in_executor(None, extract, ticket)
+    ticket = await extract(ticket)
     print(
         f"      error_codes={ticket.error_codes!r}  account={ticket.account!r}"
         f"  symptoms={ticket.symptoms!r}"
@@ -84,13 +83,13 @@ async def run_pipeline_async(ticket_id: str = "mock") -> None:
 
     # ── 5. Summarize ───────────────────────────────────────────────
     print("\n[5/7] Summarising ticket …")
-    ticket = await loop.run_in_executor(None, summarize, ticket)
+    ticket = await summarize(ticket)
     print(f"      summary={ticket.summary[:80]!r} …")
 
     # ── 6. Draft reply (RAG) ───────────────────────────────────────
     print("\n[6/7] Drafting reply (RAG) …")
-    collection = await loop.run_in_executor(None, init_store)
-    ticket = await loop.run_in_executor(None, draft_reply, ticket, collection)
+    collection = await asyncio.to_thread(init_store)
+    ticket = await draft_reply(ticket, collection)
     print(f"      draft_reply={ticket.draft_reply[:80]!r} …")
 
     # ── 7. Route ───────────────────────────────────────────────────

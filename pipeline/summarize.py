@@ -8,6 +8,7 @@ Stub mode:  returns a templated summary when Ollama is unreachable.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 
@@ -39,7 +40,7 @@ def _build_prompt(ticket: Ticket) -> str:
     )
 
 
-def summarize(ticket: Ticket) -> Ticket:
+async def summarize(ticket: Ticket) -> Ticket:
     """Summarise *ticket*, setting ``summary``."""
     model = get_model()
 
@@ -57,7 +58,7 @@ def summarize(ticket: Ticket) -> Ticket:
 
     t0 = time.perf_counter()
     prompt = f"{_SYSTEM}\n\n{_build_prompt(ticket)}"
-    response: str = model.generate_text(prompt=prompt)
+    response: str = await asyncio.to_thread(model.generate_text, prompt)
     elapsed = time.perf_counter() - t0
 
     ticket.summary = response.strip()

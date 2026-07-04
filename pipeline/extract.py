@@ -9,6 +9,7 @@ Stub mode:  regex-based extraction when Ollama is unreachable.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import re
@@ -53,7 +54,7 @@ def _repair_json(raw: str) -> str:
     return clean
 
 
-def extract(ticket: Ticket) -> Ticket:
+async def extract(ticket: Ticket) -> Ticket:
     """Extract error codes, symptoms, and enrich account/product on *ticket*."""
     llm = get_llm()
 
@@ -71,7 +72,7 @@ def extract(ticket: Ticket) -> Ticket:
     chain = _PROMPT | llm
 
     t0 = time.perf_counter()
-    response: str = chain.invoke({"body": ticket.body})
+    response: str = await chain.ainvoke({"body": ticket.body})
     elapsed = time.perf_counter() - t0
 
     try:

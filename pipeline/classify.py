@@ -8,6 +8,7 @@ Stub mode:  sets deterministic placeholder values when Ollama is unreachable.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 import time
@@ -34,7 +35,7 @@ def _build_prompt(ticket: Ticket) -> str:
     )
 
 
-def classify(ticket: Ticket) -> Ticket:
+async def classify(ticket: Ticket) -> Ticket:
     """Classify *ticket*, setting ``category``, ``priority``, and ``confidence_classify``."""
     model = get_model()
 
@@ -52,7 +53,7 @@ def classify(ticket: Ticket) -> Ticket:
 
     t0 = time.perf_counter()
     prompt = f"{_SYSTEM}\n\n{_build_prompt(ticket)}"
-    response: str = model.generate_text(prompt=prompt)
+    response: str = await asyncio.to_thread(model.generate_text, prompt)
     elapsed = time.perf_counter() - t0
 
     category_match = re.search(r"CATEGORY:\s*(.+)", response, re.IGNORECASE)
