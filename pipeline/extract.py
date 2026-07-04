@@ -15,6 +15,7 @@ import logging
 import re
 import time
 
+from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import PromptTemplate
 
 from models import Ticket
@@ -69,17 +70,11 @@ async def extract(ticket: Ticket) -> Ticket:
         ticket.confidence_extract = 0.0
         return ticket
 
-    chain = _PROMPT | llm
+    chain = _PROMPT | llm | StrOutputParser()
 
     t0 = time.perf_counter()
-    raw_response = await chain.ainvoke({"body": ticket.body})
+    response: str = await chain.ainvoke({"body": ticket.body})
     elapsed = time.perf_counter() - t0
-
-    # Handle both plain string (OllamaLLM) and AIMessage (ChatOpenAI/OpenRouter)
-    if hasattr(raw_response, "content"):
-        response = raw_response.content
-    else:
-        response = str(raw_response)
 
     try:
         clean = _repair_json(response)
