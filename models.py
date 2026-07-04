@@ -15,7 +15,8 @@ class Ticket:
     thread: list[str] = field(default_factory=list)
     account: str = ""
     product: str = ""
-    channel: str = "email"  # one of: "email", "twitter", "chat"
+    channel: str = "web"        # "telegram", "email", or "web"
+    status: str = "untriaged"   # "untriaged", "auto-routed", "human-review", "escalated"
 
     # ── Set by pipeline/extract ────────────────────────────────────────────────
     error_codes: list[str] = field(default_factory=list)
@@ -40,6 +41,7 @@ class Ticket:
         return (
             f"Ticket(id={self.id!r}, sender={self.sender!r}, subject={self.subject!r}, "
             f"body={body_preview!r}, account={self.account!r}, product={self.product!r}, "
+            f"channel={self.channel!r}, status={self.status!r}, "
             f"error_codes={self.error_codes!r}, symptoms={self.symptoms!r}, "
             f"category={self.category!r}, priority={self.priority!r}, "
             f"confidence_classify={self.confidence_classify:.2f}, "
