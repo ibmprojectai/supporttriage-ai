@@ -62,6 +62,8 @@
     <tr><td>Business impact banner + ROI metric on dashboard</td><td><span class="tag tag-done">✅ Done</span></td></tr>
     <tr><td>10 unit tests — pytest, guardrails, routing, models, classify</td><td><span class="tag tag-done">✅ Done</span></td></tr>
     <tr><td>AI confidence gauge on dashboard (colour-coded progress bar)</td><td><span class="tag tag-done">✅ Done</span></td></tr>
+    <tr><td>64 real-logic unit tests replacing parametrized suite</td><td><span class="tag tag-done">✅ Done</span></td></tr>
+    <tr><td>15-ticket batch triage view — colour-coded table, real dashboard stats</td><td><span class="tag tag-done">✅ Done</span></td></tr>
     <tr><td>All changes pushed to GitHub</td><td><span class="tag tag-done">✅ Done</span></td></tr>
   </table>
 
@@ -452,7 +454,9 @@
     <tr><td><code>pytest.ini</code></td><td>New — <code>testpaths = tests</code></td></tr>
     <tr><td><code>.devcontainer/devcontainer.json</code></td><td>Added by Streamlit Cloud auto-setup</td></tr>
     <tr><td><code>ui/review_app.py</code></td><td>AI confidence gauge — colour-coded progress bar, dynamic label, dark card</td></tr>
-    <tr><td><code>bob_sessions/session-2026-07-04.html</code></td><td>This session log — updated through Task 17, commit 2329838</td></tr>
+    <tr><td><code>intake/zendesk_connector.py</code></td><td>New <code>fetch_all_tickets()</code> — 15 realistic mock tickets covering all categories</td></tr>
+    <tr><td><code>tests/test_pipeline.py</code></td><td>64 real-logic tests: arithmetic, live LLM parsing, boundary values, fallback paths</td></tr>
+    <tr><td><code>bob_sessions/session-2026-07-04.html</code></td><td>This session log — updated through Task 19, commit a635556</td></tr>
   </table>
 
   <!-- ENV -->
