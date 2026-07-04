@@ -58,6 +58,7 @@
     <tr><td>Fix extract.py — harden _repair_json (Streamlit Cloud Python 3.14)</td><td><span class="tag tag-done">✅ Done</span></td></tr>
     <tr><td>Fix extract.py — final: drop chain, call llm.ainvoke() directly</td><td><span class="tag tag-done">✅ Done</span></td></tr>
     <tr><td>Fix extract.py — definitive: remove LangChain, use get_model() directly</td><td><span class="tag tag-done">✅ Done</span></td></tr>
+    <tr><td>Root cause: retire get_llm() ChatOpenAI; belt-and-suspenders str coercion</td><td><span class="tag tag-done">✅ Done</span></td></tr>
     <tr><td>All changes pushed to GitHub</td><td><span class="tag tag-done">✅ Done</span></td></tr>
   </table>
 
@@ -209,8 +210,32 @@
     </ul>
   </div>
 
+  <div class="task">
+    <div class="task-title">14. Root cause found &amp; definitive fix: retire get_llm(), harden extract.py coercion <span class="tag tag-done">Done</span></div>
+    <div class="warn">⚠️ Streamlit Cloud was NOT running a stale extract.py — it was running the correct <code>24ca9e4</code> version. But something still called <code>get_llm()</code> which returned a <code>ChatOpenAI</code> object emitting <code>AIMessage</code>.</div>
+    <ul>
+      <li><strong>True root cause:</strong> <code>get_llm()</code> still existed in <code>watsonx_config.py</code> and returned <code>ChatOpenAI</code>. Streamlit Cloud's module cache or some other import path was calling it, causing <code>AIMessage</code> to surface even in code that called <code>get_model()</code>. The telltale sign was the log line <code>[llm_config] Using OpenRouter LangChain backend</code> — that print only existed inside <code>get_llm()</code>.</li>
+      <li><strong>Fix 1 — watsonx_config.py:</strong> <code>get_llm()</code> is now a 1-line shim that calls <code>get_model()</code>. No <code>ChatOpenAI</code>, no LangChain, no <code>AIMessage</code> possible from any caller regardless of which version of any file is cached.</li>
+      <li><strong>Fix 2 — extract.py _repair_json():</strong> Changed signature to <code>raw: object</code>; first thing it does is <code>if hasattr(raw, "content"): raw = raw.content</code> then <code>raw = str(raw)</code>. Cannot crash on any input type.</li>
+      <li><strong>Fix 3 — extract.py extract():</strong> Added same two-line coercion immediately after <code>asyncio.to_thread()</code> returns — belt-and-suspenders before <code>_repair_json</code> is even called.</li>
+      <li><strong>watsonx_config.py + pipeline/extract.py</strong> — commit <code>e4e1659</code></li>
+    </ul>
+  </div>
+
   <!-- GIT LOG -->
   <h2>Git Commit History</h2>
+
+  <div class="commit">
+    <span class="commit-hash">e4e1659</span> <span class="commit-date">· 2026-07-04 06:10</span>
+    <div class="commit-msg">Fix AIMessage crash: retire get_llm() ChatOpenAI, add belt-and-suspenders str coercion in extract.py</div>
+    <div class="commit-files">watsonx_config.py · pipeline/extract.py — 25 insertions, 41 deletions</div>
+  </div>
+
+  <div class="commit">
+    <span class="commit-hash">2fe2e5e</span> <span class="commit-date">· 2026-07-04 06:00</span>
+    <div class="commit-msg">Added Dev Container Folder</div>
+    <div class="commit-files">.devcontainer/devcontainer.json — 33 insertions</div>
+  </div>
 
   <div class="commit">
     <span class="commit-hash">24ca9e4</span> <span class="commit-date">· 2026-07-04 05:35</span>
