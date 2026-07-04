@@ -44,10 +44,20 @@ _ERR_RE = re.compile(r"\bERR-\d+\b")
 _ACC_RE = re.compile(r"\bACC-\d+\b")
 
 
-def _repair_json(raw: str) -> str:
-    """Strip markdown fences and common LLM JSON noise."""
+def _repair_json(raw: object) -> str:
+    """Strip markdown fences and common LLM JSON noise.
+
+    Accepts any object (str, AIMessage, etc.) and always returns a plain str,
+    so the function is safe regardless of which LangChain backend is in use.
+    """
+    # Unwrap AIMessage / BaseMessage objects from any LangChain backend
+    if hasattr(raw, "content"):
+        text = str(raw.content)
+    else:
+        text = str(raw)
+
     # Remove ```json ... ``` or ``` ... ```
-    clean = re.sub(r"```(?:json)?", "", raw).strip().rstrip("`").strip()
+    clean = re.sub(r"```(?:json)?", "", text).strip().rstrip("`").strip()
     # Strip any leading prose before the first '{'
     brace = clean.find("{")
     if brace > 0:
