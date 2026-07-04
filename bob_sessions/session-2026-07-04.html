@@ -53,6 +53,7 @@
     <tr><td>pandas + Streamlit Cloud config</td><td><span class="tag tag-done">✅ Done</span></td></tr>
     <tr><td>README rewritten for IBM AI Builders Challenge</td><td><span class="tag tag-done">✅ Done</span></td></tr>
     <tr><td>OpenRouter / Granite 4.1 cloud backend</td><td><span class="tag tag-done">✅ Done</span></td></tr>
+    <tr><td>Fix AIMessage crash in extract.py (Streamlit Cloud)</td><td><span class="tag tag-done">✅ Done</span></td></tr>
     <tr><td>All changes pushed to GitHub</td><td><span class="tag tag-done">✅ Done</span></td></tr>
   </table>
 
@@ -152,8 +153,29 @@
     </ul>
   </div>
 
+  <div class="task">
+    <div class="task-title">9. Fix extract.py AIMessage crash on Streamlit Cloud <span class="tag tag-done">Done</span></div>
+    <ul>
+      <li><strong>Root cause:</strong> <code>ChatOpenAI.ainvoke()</code> (OpenRouter backend) returns an <code>AIMessage</code> object, not a plain <code>str</code>. <code>_repair_json()</code> called <code>re.sub()</code> on it and crashed with <code>TypeError: expected string or bytes-like object</code>.</li>
+      <li><strong>Fix:</strong> after <code>await chain.ainvoke()</code>, check <code>hasattr(raw_response, "content")</code> — use <code>.content</code> for <code>AIMessage</code>, <code>str()</code> fallback for plain string (Ollama). Both backends now pass a clean string to <code>_repair_json()</code>.</li>
+      <li><strong>pipeline/extract.py</strong> — 7 insertions, 1 deletion</li>
+    </ul>
+  </div>
+
   <!-- GIT LOG -->
   <h2>Git Commit History</h2>
+
+  <div class="commit">
+    <span class="commit-hash">9660f7a</span> <span class="commit-date">· 2026-07-04 04:45</span>
+    <div class="commit-msg">Fix extract.py: handle AIMessage response from ChatOpenAI</div>
+    <div class="commit-files">pipeline/extract.py — 7 insertions, 1 deletion</div>
+  </div>
+
+  <div class="commit">
+    <span class="commit-hash">8b21963</span> <span class="commit-date">· 2026-07-04 04:40</span>
+    <div class="commit-msg">Update session log with OpenRouter backend task</div>
+    <div class="commit-files">bob_sessions/session-2026-07-04.html — 94 insertions, 36 deletions</div>
+  </div>
 
   <div class="commit">
     <span class="commit-hash">269c3d0</span> <span class="commit-date">· 2026-07-04 04:30</span>
@@ -245,6 +267,7 @@
     <tr><td><code>routing/router.py</code></td><td>Confidence threshold → human-review; severity_impact score; sets ticket.requires_human_review</td></tr>
     <tr><td><code>app.py</code></td><td>Full async with asyncio.run(); direct await calls; structured logging</td></tr>
     <tr><td><code>ui/review_app.py</code></td><td>Two-tab layout; executive dashboard with KPIs, bar chart, outage alerts; async pipeline</td></tr>
+    <tr><td><code>pipeline/extract.py</code></td><td>AIMessage fix: unwrap <code>.content</code> from ChatOpenAI response before passing to <code>_repair_json()</code></td></tr>
     <tr><td><code>bob_sessions/session-2026-07-04.html</code></td><td>This session log file</td></tr>
   </table>
 
