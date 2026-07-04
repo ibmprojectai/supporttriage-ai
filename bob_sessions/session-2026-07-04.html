@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>supporttriage-ai — Session Log 2026-07-04</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "Segoe UI", system-ui, sans-serif; font-size: 14px; line-height: 1.6; background: #ffffff; color: #1f2328; padding: 2rem 1rem; }
+  .wrap { max-width: 760px; margin: 0 auto; }
+  h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: .25rem; }
+  .meta { color: #57606a; font-size: 13px; margin-bottom: 2rem; }
+  h2 { font-size: 1.1rem; font-weight: 600; margin: 2rem 0 .75rem; border-bottom: 1px solid #e5e7eb; padding-bottom: .35rem; }
+  h3 { font-size: .95rem; font-weight: 600; margin: 1.25rem 0 .4rem; color: #1f2328; }
+  p { margin-bottom: .6rem; }
+  ul { padding-left: 1.4rem; margin-bottom: .6rem; }
+  li { margin-bottom: .25rem; }
+  code { font-family: "SFMono-Regular", Consolas, monospace; font-size: 12px; background: #f7f8fa; border: 1px solid #e5e7eb; border-radius: 3px; padding: 1px 5px; }
+  pre { background: #f7f8fa; border: 1px solid #e5e7eb; border-radius: 6px; padding: 1rem; overflow-x: auto; margin-bottom: .75rem; font-size: 12px; font-family: "SFMono-Regular", Consolas, monospace; line-height: 1.5; }
+  .commit { background: #f7f8fa; border: 1px solid #e5e7eb; border-radius: 6px; padding: .85rem 1rem; margin-bottom: .75rem; }
+  .commit-hash { color: #3b82d4; font-weight: 600; font-family: monospace; }
+  .commit-date { color: #57606a; font-size: 12px; }
+  .commit-msg { font-weight: 600; margin: .25rem 0; }
+  .commit-files { color: #57606a; font-size: 12px; }
+  .tag { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 12px; margin-right: 4px; }
+  .tag-done { background: #dafbe1; color: #1a7f37; }
+  .task { border-left: 3px solid #e5e7eb; padding-left: .75rem; margin-bottom: 1rem; }
+  .task-title { font-weight: 600; margin-bottom: .3rem; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; font-size: 13px; }
+  th { background: #f7f8fa; text-align: left; padding: .45rem .65rem; border: 1px solid #e5e7eb; font-weight: 600; }
+  td { padding: .4rem .65rem; border: 1px solid #e5e7eb; vertical-align: top; }
+  .footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid #e5e7eb; text-align: center; color: #57606a; font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>supporttriage-ai — Session Log</h1>
+  <p class="meta">Repository: github.com/ibmprojectai/supporttriage-ai &nbsp;·&nbsp; Branch: main &nbsp;·&nbsp; Session date: 2026-07-04</p>
+
+  <h2>Session Overview</h2>
+  <p>This session covered the full setup of the Ollama local LLM backend, a Gen 3 agentic upgrade of the support triage pipeline, and several incremental feature additions. All changes were committed and pushed to GitHub.</p>
+
+  <table>
+    <tr><th>Area</th><th>Status</th></tr>
+    <tr><td>Ollama installation &amp; model pull</td><td><span class="tag tag-done">✅ Done</span></td></tr>
+    <tr><td>Pipeline runs in live LLM mode</td><td><span class="tag tag-done">✅ Done</span></td></tr>
+    <tr><td>Streamlit UI running</td><td><span class="tag tag-done">✅ Done</span></td></tr>
+    <tr><td>Gen 3 upgrade (confidence, RAG, symptoms)</td><td><span class="tag tag-done">✅ Done</span></td></tr>
+    <tr><td>Confidence scoring + human-review routing</td><td><span class="tag tag-done">✅ Done</span></td></tr>
+    <tr><td>Async pipeline refactor</td><td><span class="tag tag-done">✅ Done</span></td></tr>
+    <tr><td>Executive dashboard tab</td><td><span class="tag tag-done">✅ Done</span></td></tr>
+    <tr><td>pandas + Streamlit Cloud config</td><td><span class="tag tag-done">✅ Done</span></td></tr>
+    <tr><td>README rewritten for IBM AI Builders Challenge</td><td><span class="tag tag-done">✅ Done</span></td></tr>
+    <tr><td>All changes pushed to GitHub</td><td><span class="tag tag-done">✅ Done</span></td></tr>
+  </table>
+
+  <h2>Tasks Completed</h2>
+
+  <div class="task">
+    <div class="task-title">1. Ollama Setup &amp; Model Pull <span class="tag tag-done">Done</span></div>
+    <ul>
+      <li>Located Ollama at <code>C:\Users\User\AppData\Local\Programs\Ollama\ollama.exe</code></li>
+      <li>Added Ollama to user PATH permanently</li>
+      <li>Started Ollama server (<code>ollama serve</code>)</li>
+      <li>Fixed model name: <code>granite3.1:8b</code> → <code>granite3-dense:8b</code> → switched to <code>llama3.2:1b</code> (1.3 GB, fast pull)</li>
+      <li>Pulled <code>llama3.2:1b</code> successfully; <code>granite3-dense:8b</code> also downloaded</li>
+      <li>Updated <code>watsonx_config.py</code>, <code>.env</code>, <code>.env.example</code> with correct model name</li>
+      <li>Copied <code>.env.example</code> → <code>.env</code></li>
+      <li>Verified all Python dependencies already installed</li>
+      <li>Ran <code>python app.py</code> — live LLM output confirmed</li>
+      <li>Launched <code>streamlit run ui/review_app.py</code> at <code>http://localhost:8501</code></li>
+    </ul>
+  </div>
+
+  <div class="task">
+    <div class="task-title">2. Gen 3 Pipeline Upgrade <span class="tag tag-done">Done</span></div>
+    <ul>
+      <li><strong>models.py</strong> — added <code>symptoms: list[str]</code>, <code>confidence_extract: float</code>, <code>confidence_classify: float</code></li>
+      <li><strong>classify.py</strong> — LLM prompt asks for CONFIDENCE score; parsed and stored on ticket</li>
+      <li><strong>extract.py</strong> — LLM returns symptoms + confidence; <code>_repair_json()</code> for robust JSON parsing; structured logging</li>
+      <li><strong>summarize.py</strong> — added timing and structured logging</li>
+      <li><strong>draft.py</strong> — metadata-filtered ChromaDB retrieval by category; anti-hallucination instruction in prompt</li>
+      <li><strong>rag/store.py</strong> — all 12 KB seed docs now carry <code>category</code> + <code>product</code> metadata</li>
+      <li><strong>router.py</strong> — confidence threshold (0.75) routes to <code>queue-human-review</code>; <code>severity_impact</code> score (0–10)</li>
+      <li><strong>app.py</strong> — <code>asyncio.run()</code>; structured <code>logging.basicConfig</code>; symptoms + confidence in output</li>
+    </ul>
+  </div>
+
+  <div class="task">
+    <div class="task-title">3. Confidence Scoring &amp; Human-Review Routing <span class="tag tag-done">Done</span></div>
+    <ul>
+      <li><strong>models.py</strong> — added <code>classify_confidence: float = 0.0</code> and <code>requires_human_review: bool = False</code></li>
+      <li><strong>classify.py</strong> — populates both <code>confidence_classify</code> and <code>classify_confidence</code>; stub defaults to <code>0.5</code></li>
+      <li><strong>router.py</strong> — checks <code>ticket.classify_confidence &lt; 0.75</code>; sets <code>ticket.requires_human_review = True</code>; routes to <code>"human-review"</code> queue with <code>escalate=True</code></li>
+      <li><strong>review_app.py</strong> — <code>st.metric("AI Confidence")</code> + <code>st.warning()</code> banner for low-confidence tickets</li>
+    </ul>
+  </div>
+
+  <div class="task">
+    <div class="task-title">4. Async Pipeline Refactor <span class="tag tag-done">Done</span></div>
+    <ul>
+      <li><strong>classify.py</strong> — <code>async def classify()</code>; <code>await asyncio.to_thread(model.generate_text, prompt)</code></li>
+      <li><strong>extract.py</strong> — <code>async def extract()</code>; <code>await chain.ainvoke()</code> replaces <code>.invoke()</code></li>
+      <li><strong>summarize.py</strong> — <code>async def summarize()</code>; <code>await asyncio.to_thread(model.generate_text, prompt)</code></li>
+      <li><strong>draft.py</strong> — <code>async def draft_reply()</code>; <code>await asyncio.to_thread(model.generate_text, prompt)</code></li>
+      <li><strong>app.py</strong> — direct <code>await</code> calls to all pipeline functions; <code>asyncio.to_thread</code> for sync I/O</li>
+      <li><strong>review_app.py</strong> — inner <code>async def _run()</code> wrapped in <code>asyncio.run()</code> inside cached function</li>
+    </ul>
+  </div>
+
+  <div class="task">
+    <div class="task-title">5. Executive Dashboard Tab <span class="tag tag-done">Done</span></div>
+    <ul>
+      <li><strong>review_app.py</strong> — two-tab layout: <em>📊 Dashboard</em> and <em>🎫 Ticket Review</em></li>
+      <li>Dashboard: 4 KPI metrics — Total Tickets, AI Confidence, Severity Impact, Escalation Status</li>
+      <li>Dashboard: bar chart of ticket volume by category (mock data)</li>
+      <li>Dashboard: 🚨 Outage Alerts — <code>st.warning()</code> per symptom or <code>st.success()</code> if none</li>
+      <li>Ticket Review tab: all existing content moved in unchanged</li>
+    </ul>
+  </div>
+
+  <div class="task">
+    <div class="task-title">6. pandas + Streamlit Cloud Config <span class="tag tag-done">Done</span></div>
+    <ul>
+      <li><strong>requirements.txt</strong> — added <code>pandas&gt;=1.5</code></li>
+      <li><strong>.streamlit/config.toml</strong> — created with headless server config + IBM Carbon dark theme</li>
+    </ul>
+  </div>
+
+  <div class="task">
+    <div class="task-title">7. README Rewrite — IBM AI Builders Challenge <span class="tag tag-done">Done</span></div>
+    <ul>
+      <li>Full rewrite: submission context, 7-stage pipeline, Key Innovations table, Architecture diagram, Stack table, Quick Start, Stub mode, Challenge section</li>
+      <li>IBM Bob credited as AI Development Partner</li>
+      <li>Reference to <code>/bob_sessions/</code> for session exports</li>
+    </ul>
+  </div>
+
+  <h2>Git Commit History</h2>
+
+  <div class="commit">
+    <span class="commit-hash">66de21f</span> <span class="commit-date">· 2026-07-04 04:10</span>
+    <div class="commit-msg">Update README for IBM AI Builders Challenge submission</div>
+    <div class="commit-files">README.md — 43 insertions, 86 deletions</div>
+  </div>
+
+  <div class="commit">
+    <span class="commit-hash">9a5bacc</span> <span class="commit-date">· 2026-07-04 04:05</span>
+    <div class="commit-msg">Add pandas to requirements and Streamlit Cloud config</div>
+    <div class="commit-files">requirements.txt · .streamlit/config.toml — 11 insertions</div>
+  </div>
+
+  <div class="commit">
+    <span class="commit-hash">0e01cb5</span> <span class="commit-date">· 2026-07-04 03:55</span>
+    <div class="commit-msg">Add executive dashboard tab to Streamlit UI</div>
+    <div class="commit-files">ui/review_app.py — 114 insertions, 62 deletions</div>
+  </div>
+
+  <div class="commit">
+    <span class="commit-hash">f3afad9</span> <span class="commit-date">· 2026-07-04 03:52</span>
+    <div class="commit-msg">Refactor pipeline to fully async</div>
+    <div class="commit-files">app.py · pipeline/classify.py · pipeline/draft.py · pipeline/extract.py · pipeline/summarize.py · ui/review_app.py — 31 insertions, 25 deletions</div>
+  </div>
+
+  <div class="commit">
+    <span class="commit-hash">c321a37</span> <span class="commit-date">· 2026-07-04 03:43</span>
+    <div class="commit-msg">Add classify_confidence + requires_human_review to ticket and UI</div>
+    <div class="commit-files">models.py · pipeline/classify.py · routing/router.py · ui/review_app.py — 25 insertions, 16 deletions</div>
+  </div>
+
+  <div class="commit">
+    <span class="commit-hash">88c818c</span> <span class="commit-date">· 2026-07-04 03:24</span>
+    <div class="commit-msg">Gen 3 upgrade: confidence scoring, async pipeline, metadata RAG, symptoms, human-review routing</div>
+    <div class="commit-files">8 files — 315 insertions, 106 deletions</div>
+  </div>
+
+  <div class="commit">
+    <span class="commit-hash">ca45c94</span> <span class="commit-date">· 2026-07-04 03:02</span>
+    <div class="commit-msg">Switch LLM backend to Ollama (llama3.2:1b default)</div>
+    <div class="commit-files">.env.example · README.md · requirements.txt · watsonx_config.py — 140 insertions, 89 deletions</div>
+  </div>
+
+  <h2>Files Modified This Session</h2>
+  <table>
+    <tr><th>File</th><th>Changes</th></tr>
+    <tr><td><code>watsonx_config.py</code></td><td>Replaced watsonx/HF backend with Ollama HTTP wrapper</td></tr>
+    <tr><td><code>.env.example</code></td><td>OLLAMA_BASE_URL + OLLAMA_MODEL vars</td></tr>
+    <tr><td><code>requirements.txt</code></td><td>Dropped ibm-watsonx-ai; added langchain-ollama, pandas&gt;=1.5</td></tr>
+    <tr><td><code>.streamlit/config.toml</code></td><td>New — headless server + IBM Carbon dark theme</td></tr>
+    <tr><td><code>README.md</code></td><td>Full rewrite for IBM AI Builders Challenge submission</td></tr>
+    <tr><td><code>models.py</code></td><td>Added symptoms, confidence_extract, confidence_classify, classify_confidence, requires_human_review</td></tr>
+    <tr><td><code>pipeline/classify.py</code></td><td>Confidence score; async; asyncio.to_thread; logging</td></tr>
+    <tr><td><code>pipeline/extract.py</code></td><td>Symptoms + confidence; _repair_json(); async; chain.ainvoke(); logging</td></tr>
+    <tr><td><code>pipeline/summarize.py</code></td><td>Async; asyncio.to_thread; timing + logging</td></tr>
+    <tr><td><code>pipeline/draft.py</code></td><td>Metadata-filtered RAG; anti-hallucination guard; async; asyncio.to_thread</td></tr>
+    <tr><td><code>rag/store.py</code></td><td>Seed docs with category+product metadata; where filter in retrieve()</td></tr>
+    <tr><td><code>routing/router.py</code></td><td>Confidence threshold → human-review; severity_impact score</td></tr>
+    <tr><td><code>app.py</code></td><td>Full async with asyncio.run(); structured logging</td></tr>
+    <tr><td><code>ui/review_app.py</code></td><td>Two-tab layout; executive dashboard; async pipeline</td></tr>
+  </table>
+
+  <h2>Environment</h2>
+  <table>
+    <tr><th>Item</th><th>Value</th></tr>
+    <tr><td>Ollama path</td><td><code>C:\Users\User\AppData\Local\Programs\Ollama\ollama.exe</code></td></tr>
+    <tr><td>Active model</td><td><code>llama3.2:1b</code> (1.3 GB)</td></tr>
+    <tr><td>Also available</td><td><code>granite3-dense:8b</code> (4.9 GB)</td></tr>
+    <tr><td>Python</td><td><code>C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\python.exe</code></td></tr>
+    <tr><td>Streamlit UI</td><td><code>http://localhost:8501</code></td></tr>
+    <tr><td>Ollama API</td><td><code>http://localhost:11434</code></td></tr>
+    <tr><td>GitHub repo</td><td>github.com/ibmprojectai/supporttriage-ai</td></tr>
+  </table>
+
+  <h2>Quick-Start Commands</h2>
+  <pre># Start Ollama server
+&amp; "$env:LOCALAPPDATA\Programs\Ollama\ollama.exe" serve
+
+# Run full pipeline
+cd "C:\Users\User\OneDrive\Desktop\supporttriage-ai"
+&amp; "C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\python.exe" app.py
+
+# Launch Streamlit UI
+&amp; "C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\Scripts\streamlit.exe" run ui/review_app.py
+
+# Switch to larger Granite model (edit .env)
+OLLAMA_MODEL=granite3-dense:8b</pre>
+
+  <div class="footer">Made with IBM Bob</div>
+</div>
+</body>
+</html>
