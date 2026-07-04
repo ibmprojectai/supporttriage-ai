@@ -222,7 +222,7 @@ def _ticket_badges(t) -> str:
     ch   = (t.channel  or "web").lower()
     pri  = (t.priority or "medium").lower()
     stat = (t.status   or "untriaged").lower().replace(" ", "-")
-    cat  = (t.category or "unknown").upper()
+    cat  = _html.escape((t.category or "unknown").upper())
     return (
         f"<span class='badge badge-{ch}'>{ch.upper()}</span>"
         f"<span class='badge badge-{pri}'>{pri.upper()}</span>"
@@ -391,113 +391,102 @@ if page == "⚙️ Settings":
     )
 
     # ── Telegram ──────────────────────────────────────────────────────────────
-    st.markdown("<div class='settings-card'>", unsafe_allow_html=True)
-    st.markdown("### ✈️ Telegram Bot")
-    st.markdown(
-        "<p style='color:#6f6f6f;font-size:0.82rem;margin-top:-0.5rem'>"
-        "Get your token from <b style='color:#c6c6c6'>@BotFather</b> on Telegram → "
-        "<code>/newbot</code> → copy the API token.</p>",
-        unsafe_allow_html=True,
-    )
-    tg_token_input = st.text_input(
-        "Telegram Bot Token",
-        value=st.session_state.get("tg_token", ""),
-        type="password",
-        placeholder="1234567890:ABCdefGHIjklMNOpqrSTUvwxYZ",
-        key="tg_token_field",
-    )
-    tg_col1, tg_col2 = st.columns([1, 3])
-    if tg_col1.button("💾 Save & Test", key="save_tg", use_container_width=True):
-        if tg_token_input.strip():
-            try:
-                import requests as _req
-                r = _req.get(
-                    f"https://api.telegram.org/bot{tg_token_input}/getMe",
-                    timeout=5,
-                )
-                if r.status_code == 200:
-                    bot_name = r.json()["result"]["username"]
-                    st.session_state["tg_token"] = tg_token_input.strip()
-                    st.success(f"✅ Connected to @{bot_name}")
-                else:
-                    st.error("❌ Invalid token — check and try again.")
-            except Exception as e:
-                st.error(f"❌ Connection failed: {e}")
-        else:
-            st.warning("Please enter a token.")
-    st.markdown("</div>", unsafe_allow_html=True)
+    with st.container(border=True):
+        st.markdown("### ✈️ Telegram Bot")
+        st.caption("Get your token from **@BotFather** on Telegram → `/newbot` → copy the API token.")
+        tg_token_input = st.text_input(
+            "Telegram Bot Token",
+            value=st.session_state.get("tg_token", ""),
+            type="password",
+            placeholder="1234567890:ABCdefGHIjklMNOpqrSTUvwxYZ",
+            key="tg_token_field",
+        )
+        tg_col1, tg_col2 = st.columns([1, 3])
+        if tg_col1.button("💾 Save & Test", key="save_tg", use_container_width=True):
+            if tg_token_input.strip():
+                try:
+                    import requests as _req
+                    r = _req.get(
+                        f"https://api.telegram.org/bot{tg_token_input}/getMe",
+                        timeout=5,
+                    )
+                    if r.status_code == 200:
+                        bot_name = r.json()["result"]["username"]
+                        st.session_state["tg_token"] = tg_token_input.strip()
+                        st.success(f"✅ Connected to @{bot_name}")
+                    else:
+                        st.error("❌ Invalid token — check and try again.")
+                except Exception as e:
+                    st.error(f"❌ Connection failed: {e}")
+            else:
+                st.warning("Please enter a token.")
 
     # ── Gmail IMAP ────────────────────────────────────────────────────────────
-    st.markdown("<div class='settings-card'>", unsafe_allow_html=True)
-    st.markdown("### 📧 Gmail / Email")
-    st.markdown(
-        "<p style='color:#6f6f6f;font-size:0.82rem;margin-top:-0.5rem'>"
-        "Use a Gmail App Password (not your main password). "
-        "Enable at: Google Account → Security → 2-Step Verification → App Passwords.</p>",
-        unsafe_allow_html=True,
-    )
-    gm_col1, gm_col2 = st.columns(2)
-    gmail_user_input = gm_col1.text_input(
-        "Gmail Address",
-        value=st.session_state.get("gmail_user", ""),
-        placeholder="support@yourcompany.com",
-        key="gmail_user_field",
-    )
-    gmail_pass_input = gm_col2.text_input(
-        "App Password",
-        value=st.session_state.get("gmail_pass", ""),
-        type="password",
-        placeholder="xxxx xxxx xxxx xxxx",
-        key="gmail_pass_field",
-    )
-    imap_server_input = st.text_input(
-        "IMAP Server",
-        value=st.session_state.get("imap_server", "imap.gmail.com"),
-        help="imap.gmail.com for Gmail · outlook.office365.com for Outlook",
-        key="imap_server_field",
-    )
-    if st.button("💾 Save & Test Email Connection", key="save_gmail"):
-        if gmail_user_input.strip() and gmail_pass_input.strip():
-            import imaplib as _imap
-            try:
-                server = imap_server_input.strip() or "imap.gmail.com"
-                mail = _imap.IMAP4_SSL(server)
-                mail.login(gmail_user_input.strip(), gmail_pass_input.strip())
-                mail.logout()
-                st.session_state["gmail_user"]   = gmail_user_input.strip()
-                st.session_state["gmail_pass"]   = gmail_pass_input.strip()
-                st.session_state["imap_server"]  = server
-                st.success(f"✅ Connected to {gmail_user_input.strip()} via {server}")
-            except Exception as e:
-                st.error(f"❌ Connection failed: {e}")
-        else:
-            st.warning("Please enter both email address and app password.")
-    st.markdown("</div>", unsafe_allow_html=True)
+    with st.container(border=True):
+        st.markdown("### 📧 Gmail / Email")
+        st.caption(
+            "Use a Gmail App Password (not your main password). "
+            "Enable at: Google Account → Security → 2-Step Verification → App Passwords."
+        )
+        gm_col1, gm_col2 = st.columns(2)
+        gmail_user_input = gm_col1.text_input(
+            "Gmail Address",
+            value=st.session_state.get("gmail_user", ""),
+            placeholder="support@yourcompany.com",
+            key="gmail_user_field",
+        )
+        gmail_pass_input = gm_col2.text_input(
+            "App Password",
+            value=st.session_state.get("gmail_pass", ""),
+            type="password",
+            placeholder="xxxx xxxx xxxx xxxx",
+            key="gmail_pass_field",
+        )
+        imap_server_input = st.text_input(
+            "IMAP Server",
+            value=st.session_state.get("imap_server", "imap.gmail.com"),
+            help="imap.gmail.com for Gmail · outlook.office365.com for Outlook",
+            key="imap_server_field",
+        )
+        if st.button("💾 Save & Test Email Connection", key="save_gmail"):
+            if gmail_user_input.strip() and gmail_pass_input.strip():
+                import imaplib as _imap
+                try:
+                    server = imap_server_input.strip() or "imap.gmail.com"
+                    mail = _imap.IMAP4_SSL(server)
+                    mail.login(gmail_user_input.strip(), gmail_pass_input.strip())
+                    mail.logout()
+                    st.session_state["gmail_user"]   = gmail_user_input.strip()
+                    st.session_state["gmail_pass"]   = gmail_pass_input.strip()
+                    st.session_state["imap_server"]  = server
+                    st.success(f"✅ Connected to {gmail_user_input.strip()} via {server}")
+                except Exception as e:
+                    st.error(f"❌ Connection failed: {e}")
+            else:
+                st.warning("Please enter both email address and app password.")
 
     # ── Web Form ──────────────────────────────────────────────────────────────
-    st.markdown("<div class='settings-card'>", unsafe_allow_html=True)
-    st.markdown("### 🌐 Web Form")
-    st.info("✅ Web form intake is always active. Customers can submit tickets directly through the app.")
-    st.markdown("</div>", unsafe_allow_html=True)
+    with st.container(border=True):
+        st.markdown("### 🌐 Web Form")
+        st.info("✅ Web form intake is always active. Customers can submit tickets directly through the app.")
 
     # ── AI Engine ─────────────────────────────────────────────────────────────
-    st.markdown("<div class='settings-card'>", unsafe_allow_html=True)
-    st.markdown("### 🤖 AI Engine")
-    ai_key_input = st.text_input(
-        "OpenRouter API Key (IBM Granite)",
-        value=st.session_state.get("openrouter_key", ""),
-        type="password",
-        placeholder="sk-or-v1-…",
-        key="ai_key_field",
-    )
-    if st.button("💾 Save AI Key", key="save_ai"):
-        if ai_key_input.strip():
-            st.session_state["openrouter_key"] = ai_key_input.strip()
-            os.environ["OPENROUTER_API_KEY"]   = ai_key_input.strip()
-            st.success("✅ IBM Granite API key saved for this session.")
-        else:
-            st.warning("Please enter a key.")
-    st.markdown("</div>", unsafe_allow_html=True)
+    with st.container(border=True):
+        st.markdown("### 🤖 AI Engine")
+        ai_key_input = st.text_input(
+            "OpenRouter API Key (IBM Granite)",
+            value=st.session_state.get("openrouter_key", ""),
+            type="password",
+            placeholder="sk-or-v1-…",
+            key="ai_key_field",
+        )
+        if st.button("💾 Save AI Key", key="save_ai"):
+            if ai_key_input.strip():
+                st.session_state["openrouter_key"] = ai_key_input.strip()
+                os.environ["OPENROUTER_API_KEY"]   = ai_key_input.strip()
+                st.success("✅ IBM Granite API key saved for this session.")
+            else:
+                st.warning("Please enter a key.")
 
     st.stop()
 
@@ -822,7 +811,7 @@ HITL routing holds low-confidence tickets for agent review: only confidence &gt;
 
     # ── System log ────────────────────────────────────────────────────────────
     with st.expander("⚙️ System Execution Log", expanded=False):
-        log_text = st.session_state.log or "(no triage runs yet)"
+        log_text = _html.escape(st.session_state.log or "(no triage runs yet)")
         st.markdown(f"<div class='terminal'>{log_text}</div>", unsafe_allow_html=True)
 
 
