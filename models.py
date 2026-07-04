@@ -18,10 +18,13 @@ class Ticket:
 
     # ── Set by pipeline/extract ────────────────────────────────────────────────
     error_codes: list[str] = field(default_factory=list)
+    symptoms: list[str] = field(default_factory=list)
+    confidence_extract: float = 1.0   # 0.0–1.0; set by extract stage
 
     # ── Set by pipeline/classify ───────────────────────────────────────────────
     category: str = ""
     priority: str = ""
+    confidence_classify: float = 1.0  # 0.0–1.0; set by classify stage
 
     # ── Set by pipeline/summarize ──────────────────────────────────────────────
     summary: str = ""
@@ -34,6 +37,9 @@ class Ticket:
         return (
             f"Ticket(id={self.id!r}, sender={self.sender!r}, subject={self.subject!r}, "
             f"body={body_preview!r}, account={self.account!r}, product={self.product!r}, "
-            f"error_codes={self.error_codes!r}, category={self.category!r}, "
-            f"priority={self.priority!r}, summary={self.summary!r})"
+            f"error_codes={self.error_codes!r}, symptoms={self.symptoms!r}, "
+            f"category={self.category!r}, priority={self.priority!r}, "
+            f"confidence_classify={self.confidence_classify:.2f}, "
+            f"confidence_extract={self.confidence_extract:.2f}, "
+            f"summary={self.summary!r})"
         )

@@ -2,14 +2,19 @@
 
 Sets ticket.summary to a concise 2–3 sentence condensation of the full ticket thread.
 
-Live mode:  calls IBM Granite via the native ibm-watsonx-ai ModelInference SDK.
-Stub mode:  returns a templated summary when credentials are absent.
+Live mode:  calls the local Ollama model via watsonx_config.get_model().
+Stub mode:  returns a templated summary when Ollama is unreachable.
 """
 
 from __future__ import annotations
 
+import logging
+import time
+
 from models import Ticket
 from watsonx_config import get_model
+
+log = logging.getLogger(__name__)
 
 _SYSTEM = (
     "You are a support-ticket summariser. "
@@ -35,14 +40,11 @@ def _build_prompt(ticket: Ticket) -> str:
 
 
 def summarize(ticket: Ticket) -> Ticket:
-    """Summarise *ticket*, setting ``summary``.
-
-    Uses IBM Granite (ibm/granite-3-8b-instruct) via the ibm-watsonx-ai SDK.
-    Falls back to a templated stub summary when credentials are absent.
-    """
+    """Summarise *ticket*, setting ``summary``."""
     model = get_model()
 
     if model is None:
+        log.warning("[summarize] STUB MODE — Ollama unreachable. Generating templated summary.")
         print("[summarize] STUB MODE — generating templated summary.")
         ticket.summary = (
             f"Customer reports inability to log in to {ticket.product or 'the product'} "
@@ -53,9 +55,12 @@ def summarize(ticket: Ticket) -> Ticket:
         )
         return ticket
 
+    t0 = time.perf_counter()
     prompt = f"{_SYSTEM}\n\n{_build_prompt(ticket)}"
     response: str = model.generate_text(prompt=prompt)
-    ticket.summary = response.strip()
+    elapsed = time.perf_counter() - t0
 
+    ticket.summary = response.strip()
+    log.info("[summarize] length=%d chars elapsed=%.2fs", len(ticket.summary), elapsed)
     print(f"[summarize] summary={ticket.summary[:80]!r} …")
     return ticket

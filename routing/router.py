@@ -1,15 +1,23 @@
 """Routing — deterministic auto-tag and queue assignment.
 
-Maps a classified Ticket to a support queue and tag set based on category and priority.
-No LLM call — this is pure business logic that is easy to extend via the constants below.
+Maps a classified Ticket to a support queue and tag set based on category,
+priority, confidence scores, and critical error codes.
+
+Rules:
+  - If confidence_classify or confidence_extract is below CONFIDENCE_THRESHOLD,
+    route to 'queue-human-review' and set requires_human_review = True.
+  - Critical priority or data-loss category always escalates.
+  - severity_impact score is calculated from priority and error code severity.
 """
 
 from __future__ import annotations
 
 from models import Ticket
 
+# Tickets below this confidence threshold go to human review
+CONFIDENCE_THRESHOLD = 0.75
+
 # ── Queue mapping ──────────────────────────────────────────────────────────────
-# Map ticket category → default support queue name.
 _CATEGORY_QUEUE: dict[str, str] = {
     "authentication": "queue-auth",
     "billing": "queue-billing",
@@ -29,27 +37,74 @@ _CATEGORY_TAGS: dict[str, list[str]] = {
     "other": ["general"],
 }
 
+# Priority → numeric weight for severity_impact calculation
+_PRIORITY_WEIGHT: dict[str, int] = {
+    "critical": 4,
+    "high": 3,
+    "medium": 2,
+    "low": 1,
+}
+
+# Error code prefixes considered critical for severity scoring
+_CRITICAL_ERROR_PREFIXES = ("500", "ERR-5")
+
+
+def _severity_impact(ticket: Ticket) -> float:
+    """Return a 0.0–10.0 severity impact score.
+
+    Score = priority_weight * 2  +  1 point per critical error code (capped at 2).
+    """
+    priority = ticket.priority.lower() if ticket.priority else "medium"
+    weight = _PRIORITY_WEIGHT.get(priority, 2)
+    critical_codes = sum(
+        1 for code in ticket.error_codes
+        if any(code.startswith(p) for p in _CRITICAL_ERROR_PREFIXES)
+    )
+    return min(10.0, weight * 2.0 + min(critical_codes, 2))
+
 
 def route(ticket: Ticket) -> dict:
     """Return routing metadata for *ticket*.
 
     Returns a dict with keys:
-      queue     — name of the target support queue
-      tags      — list of string tags to apply
-      escalate  — True if this ticket should bypass normal queue and escalate immediately
+      queue                — name of the target support queue
+      tags                 — list of string tags to apply
+      escalate             — True if ticket should bypass normal queue
+      requires_human_review — True if confidence scores are below threshold
+      severity_impact      — float 0.0–10.0 severity score
     """
     category = ticket.category.lower() if ticket.category else "other"
     priority = ticket.priority.lower() if ticket.priority else "medium"
 
+    # ── Confidence check — route low-confidence tickets to human review ────────
+    low_confidence = (
+        ticket.confidence_classify < CONFIDENCE_THRESHOLD
+        or ticket.confidence_extract < CONFIDENCE_THRESHOLD
+    )
+    if low_confidence:
+        print(
+            f"[router] Low confidence (classify={ticket.confidence_classify:.2f}, "
+            f"extract={ticket.confidence_extract:.2f}) — routing to human review."
+        )
+        return {
+            "queue": "queue-human-review",
+            "tags": ["needs-human-review", f"priority-{priority}"],
+            "escalate": False,
+            "requires_human_review": True,
+            "severity_impact": _severity_impact(ticket),
+        }
+
+    # ── Normal routing ─────────────────────────────────────────────────────────
     queue = _CATEGORY_QUEUE.get(category, _CATEGORY_QUEUE["other"])
     tags = list(_CATEGORY_TAGS.get(category, ["general"]))
     tags.append(f"priority-{priority}")
 
-    # Critical priority or data-loss category always escalates
     escalate = priority == "critical" or category == "data-loss"
 
     return {
         "queue": queue,
         "tags": tags,
         "escalate": escalate,
+        "requires_human_review": False,
+        "severity_impact": _severity_impact(ticket),
     }
