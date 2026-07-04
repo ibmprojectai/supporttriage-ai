@@ -1,17 +1,14 @@
-"""Shared LLM factory — local IBM Granite via Ollama.
+"""Shared LLM factory — IBM Granite via OpenRouter (cloud) or Ollama (local).
+
+Backend selection (checked in order):
+  1. OpenRouter — if OPENROUTER_API_KEY is set, uses ibm-granite/granite-4.1-8b
+                  via the OpenRouter API. No local installation required.
+  2. Ollama     — if OPENROUTER_API_KEY is absent, falls back to the local Ollama
+                  server. Returns None (stub mode) if Ollama is unreachable.
 
 Provides:
-  get_model() → _OllamaModel | None   (used by classify, summarize, draft)
-  get_llm()   → OllamaLLM | None      (used by extract via LangChain chain)
-
-Both return None when Ollama is unreachable — every pipeline stage degrades
-gracefully to stub mode with no crash.
-
-Setup:
-  1. Install Ollama: https://ollama.com/download
-  2. Pull the model: ollama pull granite3.1:8b
-  3. Ollama runs automatically in the background on http://localhost:11434
-  No API key, no account, no internet required after the initial pull.
+  get_model() → _OpenRouterModel | _OllamaModel | None
+  get_llm()   → ChatOpenAI | OllamaLLM | None   (LangChain-compatible)
 """
 
 from __future__ import annotations
@@ -21,6 +18,10 @@ import os
 from dotenv import load_dotenv
 
 load_dotenv()
+
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+_OPENROUTER_MODEL = "ibm-granite/granite-4.1-8b"
+_OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
 _DEFAULT_MODEL = "llama3.2:1b"
 _DEFAULT_BASE_URL = "http://localhost:11434"
@@ -41,6 +42,41 @@ def _ollama_reachable(base_url: str) -> bool:
     except Exception:
         return False
 
+
+# ── OpenRouter backend ────────────────────────────────────────────────────────
+
+class _OpenRouterModel:
+    """Thin wrapper around the OpenRouter chat completions API.
+
+    Exposes .generate_text(prompt) so pipeline modules work identically
+    regardless of the backend (OpenRouter or Ollama).
+    Uses only urllib.request — no extra dependencies.
+    """
+
+    def generate_text(self, prompt: str) -> str:
+        """Send prompt to OpenRouter and return the generated text."""
+        import json
+        import urllib.request
+
+        payload = json.dumps({
+            "model": _OPENROUTER_MODEL,
+            "messages": [{"role": "user", "content": prompt}],
+        }).encode()
+
+        req = urllib.request.Request(
+            f"{_OPENROUTER_BASE_URL}/chat/completions",
+            data=payload,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+            },
+        )
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            data = json.loads(resp.read())
+            return data["choices"][0]["message"]["content"].strip()
+
+
+# ── Ollama backend ────────────────────────────────────────────────────────────
 
 class _OllamaModel:
     """Thin wrapper around the Ollama HTTP API.
@@ -75,21 +111,28 @@ class _OllamaModel:
             return data.get("response", "").strip()
 
 
-def get_model() -> _OllamaModel | None:
-    """Return an Ollama Granite model client, or None if Ollama is not running.
+# ── Public factory functions ──────────────────────────────────────────────────
 
-    Reads from environment (or .env):
-      OLLAMA_MODEL     — model name (default: granite3.1:8b)
-      OLLAMA_BASE_URL  — Ollama base URL (default: http://localhost:11434)
+def get_model() -> _OpenRouterModel | _OllamaModel | None:
+    """Return a model client for the active backend, or None in stub mode.
+
+    Priority:
+      1. OpenRouter  — when OPENROUTER_API_KEY is set
+      2. Ollama      — when local Ollama server is reachable
+      3. None        — stub mode (both unavailable)
     """
-    model, base_url = _get_config()
+    if OPENROUTER_API_KEY:
+        print(f"[llm_config] Using OpenRouter backend ({_OPENROUTER_MODEL}).")
+        return _OpenRouterModel()
 
+    model, base_url = _get_config()
     if not _ollama_reachable(base_url):
         print(
             f"[llm_config] Ollama not reachable at {base_url}. "
             "Running in stub mode. To enable live LLM:\n"
             "  1. Install Ollama: https://ollama.com/download\n"
-            f"  2. Run: ollama pull {model}"
+            f"  2. Run: ollama pull {model}\n"
+            "  Or set OPENROUTER_API_KEY for cloud inference."
         )
         return None
 
@@ -97,12 +140,30 @@ def get_model() -> _OllamaModel | None:
 
 
 def get_llm():
-    """LangChain-compatible accessor — returns an OllamaLLM or None.
+    """LangChain-compatible accessor — returns a ChatOpenAI, OllamaLLM, or None.
 
     Used by pipeline/extract.py which uses a LangChain chain.
-    """
-    model, base_url = _get_config()
 
+    Priority:
+      1. ChatOpenAI (OpenRouter) — when OPENROUTER_API_KEY is set
+      2. OllamaLLM               — when local Ollama server is reachable
+      3. None                    — stub mode
+    """
+    if OPENROUTER_API_KEY:
+        try:
+            from langchain_openai import ChatOpenAI
+            print(f"[llm_config] Using OpenRouter LangChain backend ({_OPENROUTER_MODEL}).")
+            return ChatOpenAI(
+                base_url=_OPENROUTER_BASE_URL,
+                api_key=OPENROUTER_API_KEY,
+                model=_OPENROUTER_MODEL,
+                temperature=0.2,
+            )
+        except Exception as exc:
+            print(f"[llm_config] Failed to initialise ChatOpenAI: {exc}")
+            return None
+
+    model, base_url = _get_config()
     if not _ollama_reachable(base_url):
         print(
             f"[llm_config] Ollama not reachable at {base_url}. "
