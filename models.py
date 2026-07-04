@@ -15,6 +15,7 @@ class Ticket:
     thread: list[str] = field(default_factory=list)
     account: str = ""
     product: str = ""
+    channel: str = "email"  # one of: "email", "twitter", "chat"
 
     # ── Set by pipeline/extract ────────────────────────────────────────────────
     error_codes: list[str] = field(default_factory=list)
