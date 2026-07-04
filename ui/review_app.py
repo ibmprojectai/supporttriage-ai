@@ -90,6 +90,25 @@ This system reduces misrouting through AI confidence scoring, auto-escalation, a
     m4.metric("Escalation Status", "Yes" if routing["escalate"] else "No")
     m5.metric("💰 Est. Annual Saving", "$329K")
 
+    # ── Confidence gauge ───────────────────────────────────────────────────────
+    st.subheader("🎯 AI Confidence Gauge")
+    conf = ticket.classify_confidence
+    color = "#42be65" if conf >= 0.8 else "#f1c21b" if conf >= 0.6 else "#fa4d56"
+    label = "High Confidence ✅" if conf >= 0.8 else "Medium Confidence ⚠️" if conf >= 0.6 else "Low Confidence — Human Review Required 🚨"
+    st.markdown(f"""
+<div style='background:#262626;border-radius:12px;padding:1.2rem;margin-bottom:1rem'>
+<div style='display:flex;justify-content:space-between;margin-bottom:0.5rem'>
+<span style='color:#f4f4f4;font-weight:600'>Classification Confidence</span>
+<span style='color:{color};font-weight:700;font-size:1.3rem'>{conf:.0%}</span>
+</div>
+<div style='background:#393939;border-radius:6px;height:18px;width:100%'>
+<div style='background:{color};border-radius:6px;height:18px;width:{conf*100:.0f}%'>
+</div>
+</div>
+<p style='color:{color};margin:0.5rem 0 0 0;font-size:0.9rem'>{label}</p>
+</div>
+""", unsafe_allow_html=True)
+
     st.divider()
 
     # ── Ticket volume by category bar chart ───────────────────────────────────
