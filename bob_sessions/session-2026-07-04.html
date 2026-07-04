@@ -75,6 +75,8 @@
     <tr><td>Professional UI: Settings page, sidebar nav, enterprise header, saved credentials</td><td><span class="tag tag-done">✅ Done</span></td></tr>
     <tr><td>Fix router boundary: escalation confidence guard + strict &lt; threshold for human-review</td><td><span class="tag tag-done">✅ Done</span></td></tr>
     <tr><td>Standalone customer web form (ui/web_form.py), SMTP ticket sending, IMAP [SUPPORT-TICKET] filter</td><td><span class="tag tag-done">✅ Done</span></td></tr>
+    <tr><td>Fix raw HTML rendering: escape ticket fields, replace split divs with st.container, escape log</td><td><span class="tag tag-done">✅ Done</span></td></tr>
+    <tr><td>Fix inbox card newline fragmentation: collapse body newlines before preview injection</td><td><span class="tag tag-done">✅ Done</span></td></tr>
   </table>
 
   <!-- TASKS -->
@@ -287,6 +289,25 @@
   </div>
 
   <div class="task">
+    <div class="task-title">31. Fix Inbox Card Newline Fragmentation <span class="tag tag-done">Done</span></div>
+    <ul>
+      <li><strong>Root cause:</strong> ticket body text contains <code>\n</code> newline characters. When injected into the f-string HTML card, Streamlit's markdown renderer splits the HTML at those newlines, breaking the tag structure. The closing <code>&lt;/div&gt;</code> was rendered as literal text on screen between cards, and each newline-split fragment appeared as a raw HTML snippet.</li>
+      <li><strong>Fix:</strong> added one line before preview truncation — <code>body_flat = (t.body or "").replace("\r\n", " ").replace("\n", " ").replace("\r", " ")</code> — collapses all newline variants to a single space so the entire preview is one unbroken line safe for HTML injection.</li>
+      <li><strong>ui/review_app.py</strong> — 2 insertions, 1 deletion.</li>
+    </ul>
+  </div>
+
+  <div class="task">
+    <div class="task-title">30. Fix Raw HTML Rendering — Full Audit <span class="tag tag-done">Done</span></div>
+    <ul>
+      <li><strong>Settings page split-div bug:</strong> <code>st.markdown("&lt;div class='settings-card'&gt;")</code> + later <code>st.markdown("&lt;/div&gt;")</code> across separate calls — Streamlit renders each call as an isolated fragment, so the orphaned <code>&lt;/div&gt;</code> appeared as literal text. Fixed by replacing all four settings sections with <code>with st.container(border=True):</code> — native Streamlit bordered card that correctly wraps widgets.</li>
+      <li><strong><code>_ticket_badges()</code>:</strong> LLM-generated <code>t.category</code> text injected raw — escaped with <code>_html.escape()</code>.</li>
+      <li><strong>System log terminal div:</strong> <code>log_text</code> injected raw — wrapped with <code>_html.escape()</code> before injection.</li>
+      <li>All prior inbox card, HITL card, outage radar, and symptom chip escaping from Task 29 retained.</li>
+    </ul>
+  </div>
+
+  <div class="task">
     <div class="task-title">29. Standalone Customer Web Form + Full Email Loop <span class="tag tag-done">Done</span></div>
     <ul>
       <li><strong>ui/web_form.py</strong> (new) — separate public-facing Streamlit app; light <code>#f4f4f4</code> background; IBM blue submit button; two-column name/email row; product/priority selects; success confirmation card. Launch with <code>streamlit run ui/web_form.py</code>.</li>
@@ -400,6 +421,24 @@
 
   <!-- GIT LOG -->
   <h2>Git Commit History</h2>
+
+  <div class="commit">
+    <span class="commit-hash">pending-31</span> <span class="commit-date">· 2026-07-04 17:00</span>
+    <div class="commit-msg">Fix inbox card newline fragmentation: collapse body newlines before HTML preview injection</div>
+    <div class="commit-files">ui/review_app.py — 2 insertions, 1 deletion</div>
+  </div>
+
+  <div class="commit">
+    <span class="commit-hash">8e3e642</span> <span class="commit-date">· 2026-07-04 16:30</span>
+    <div class="commit-msg">Fix raw HTML rendering: escape all ticket fields before HTML injection</div>
+    <div class="commit-files">ui/review_app.py — 92 insertions, 103 deletions (settings cards → st.container, log escaping, _ticket_badges escaping)</div>
+  </div>
+
+  <div class="commit">
+    <span class="commit-hash">5a6f484</span> <span class="commit-date">· 2026-07-04 16:00</span>
+    <div class="commit-msg">Fix raw HTML rendering: escape all ticket fields before HTML injection (first pass)</div>
+    <div class="commit-files">ui/review_app.py — 22 insertions, 10 deletions</div>
+  </div>
 
   <div class="commit">
     <span class="commit-hash">23d779a</span> <span class="commit-date">· 2026-07-04 15:00</span>

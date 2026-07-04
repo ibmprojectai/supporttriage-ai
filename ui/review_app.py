@@ -575,7 +575,9 @@ if page == "📥 Inbox":
         ch      = (t.channel or "web").lower()
         icon    = _CHANNEL_ICON.get(ch, "?")
         color   = _CHANNEL_COLOR.get(ch, "#8d8d8d")
-        preview = (t.body[:120] + "…") if len(t.body) > 120 else t.body
+        # Collapse newlines in preview so they don't fragment the HTML card
+        body_flat    = (t.body or "").replace("\r\n", " ").replace("\n", " ").replace("\r", " ")
+        preview      = (body_flat[:120] + "…") if len(body_flat) > 120 else body_flat
         # Escape all user-supplied fields before HTML injection
         id_safe      = _html.escape(t.id      or "")
         sender_safe  = _html.escape(t.sender  or "")
