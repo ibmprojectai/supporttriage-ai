@@ -80,6 +80,7 @@
     <tr><td>Fix ALL 6 multiline st.markdown HTML blocks (no more raw tag leaking) + IMAP mark-as-read</td><td><span class="tag tag-done">✅ Done</span></td></tr>
     <tr><td>Enterprise upgrade: 8-KPI dashboard, SLA badges, inbox search/filter, priority bars, queue depth, web form redesign</td><td><span class="tag tag-done">✅ Done</span></td></tr>
     <tr><td>Task 38: Fix triage mechanics — honest counters, resolve workflow, priority score 1–5, 2-button control, 3-tab workspace</td><td><span class="tag tag-done">✅ Done</span></td></tr>
+    <tr><td>Task 39: Fix Streamlit Cloud crashes — bust .pyc cache, remove sidebar toggle conflict, fix empty widget labels</td><td><span class="tag tag-done">✅ Done</span></td></tr>
   </table>
 
   <!-- TASKS -->
@@ -454,6 +455,19 @@
     </ul>
   </div>
 
+  <h2>Task 39 — Fix Streamlit Cloud Crashes: .pyc Cache, Toggle Conflict, Empty Labels</h2>
+  <div class="task">
+    <div class="task-title"><span class="tag tag-done">done</span> Three production bugs fixed — app now stable on Streamlit Cloud</div>
+    <ul>
+      <li><strong>Bug 1 — <code>AttributeError: 'Ticket' has no attribute 'priority_score'</code>:</strong> Streamlit Cloud was serving a stale compiled bytecode (<code>.pyc</code>) of <code>models.py</code> from before Task 38's fields were added. Fix: updated the <code>models.py</code> module docstring with a cache-bust timestamp — Python sees the file mtime change and recompiles. Both <code>priority_score</code> and <code>resolved</code> fields are now visible to the server.</li>
+      <li><strong>Bug 2 — <code>AttributeError: 'Ticket' has no attribute 'resolved'</code>:</strong> Same stale <code>.pyc</code> root cause. Fixed by the same docstring change.</li>
+      <li><strong>Bug 3 — Auto-Triage ON/OFF not working:</strong> Two conflicting controllers existed for <code>auto_triage_enabled</code>: the sidebar <code>st.toggle</code> (ran on every render and wrote the value back, overwriting any change the <code>ctl2</code> button had just made) and the Inbox control-strip button. Removed the <code>st.toggle</code> from the sidebar entirely — replaced with a read-only status line ("Status: ON / OFF · toggle in Inbox"). The <code>ctl2</code> button is now the single source of truth.</li>
+      <li><strong>Warning fix — empty widget labels:</strong> <code>st.radio("", ...)</code>, <code>text_input("", ...)</code> with empty string label triggered Streamlit accessibility warnings that will become exceptions in a future version. Changed all three to a meaningful label string kept hidden via <code>label_visibility="collapsed"</code>.</li>
+      <li><strong>Deprecation fix — <code>use_container_width</code>:</strong> Removed deprecated <code>use_container_width=True</code> from <code>st.line_chart()</code> call on the Intelligence Dashboard. Parameter removed after 2025-12-31.</li>
+      <li>64/64 tests still passing — 0 regressions. Commit <code>9a10a87</code></li>
+    </ul>
+  </div>
+
   <h2>Task 38 — Fix Triage Mechanics: Honest Counters, Resolve Workflow, Priority Score 1–5, 3-Tab Workspace</h2>
   <div class="task">
     <div class="task-title"><span class="tag tag-done">done</span> Accurate state management, real resolve workflow, numeric priority, 2-button control strip, 3-tab unified workspace</div>
@@ -535,6 +549,18 @@
 
   <!-- GIT LOG -->
   <h2>Git Commit History</h2>
+
+  <div class="commit">
+    <span class="commit-hash">9a10a87</span> <span class="commit-date">· 2026-07-05 01:00</span>
+    <div class="commit-msg">Fix Task 38 Streamlit Cloud crashes: bust .pyc cache, remove sidebar toggle conflict, fix empty labels</div>
+    <div class="commit-files">models.py · ui/review_app.py — 18 insertions, 12 deletions</div>
+  </div>
+
+  <div class="commit">
+    <span class="commit-hash">01c171c</span> <span class="commit-date">· 2026-07-05 00:30</span>
+    <div class="commit-msg">Update session log: Task 38 entry + commit e9a10f1</div>
+    <div class="commit-files">bob_sessions/session-2026-07-04.html — 24 insertions</div>
+  </div>
 
   <div class="commit">
     <span class="commit-hash">e9a10f1</span> <span class="commit-date">· 2026-07-05 00:00</span>
