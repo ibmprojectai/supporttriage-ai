@@ -607,6 +607,184 @@ if "auto_triage_last_fired" not in st.session_state:
 if "resolved" not in st.session_state:
     st.session_state.resolved: list[tuple] = []
 
+# remember which ticket the agent has open in the Open Tickets tab
+if "open_expanded_id" not in st.session_state:
+    st.session_state.open_expanded_id: str | None = None
+
+if "demo_mode" not in st.session_state:
+    st.session_state.demo_mode = False
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Demo Mode — pre-filled state for screen recordings / walkthroughs
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _load_demo_state() -> None:
+    """Populate session state with rich pre-triaged demo data."""
+    from models import Ticket
+
+    def _t(id, channel, sender, subject, body, account, product,
+           category, priority, confidence, score, status, queue,
+           error_codes, symptoms, summary, draft, resolved=False):
+        t = Ticket(
+            id=id, channel=channel, sender=sender, subject=subject,
+            body=body, account=account, product=product,
+            category=category, priority=priority,
+            classify_confidence=confidence, confidence_classify=confidence,
+            priority_score=score, status=status,
+            error_codes=error_codes, symptoms=symptoms,
+            summary=summary, draft_reply=draft,
+            resolved=resolved,
+        )
+        r = {"queue": queue, "status": status, "escalate": score == 5,
+             "tags": [category, priority]}
+        return t, r
+
+    demo_processed = [
+        _t(
+            id="BG-E004", channel="email",
+            sender="priya.sharma@startupco.dev",
+            subject="CRITICAL — cascade delete destroyed 6 months of records (ERR-9001)",
+            body="URGENT — critical data loss.\n\nCleanup job at 02:00 triggered ERR-9001 cascade delete. Six months of transaction records are gone from production. Operations halted. Need emergency recovery.\n\nAccount ACC-10501, DataPilot Enterprise.\n\nPriya Sharma, CTO",
+            account="ACC-10501", product="DataPilot Enterprise",
+            category="data-loss", priority="critical", confidence=0.97, score=5,
+            status="escalated", queue="data-engineering",
+            error_codes=["ERR-9001"], symptoms=["cascade delete", "data loss"],
+            summary="CTO reports a critical data-loss incident: an overnight cleanup job (ERR-9001) triggered a cascade delete wiping 6 months of production transaction records. Operations are fully halted on ACC-10501.",
+            draft="Hi Priya,\n\nI'm escalating this to our on-call data engineering team immediately and opening a P1 war-room bridge.\n\nPlease do not run any further jobs or restores until engineering confirms the blast radius. We will update you within 30 minutes.\n\nSupportTriage AI",
+        ),
+        _t(
+            id="BG-E002", channel="email",
+            sender="sarah.okonkwo@globalfinance.io",
+            subject="SSO redirect loop ERR-4022 — 40 users locked out",
+            body="Dear Support,\n\nAfter your 2.6 update all 40 users are stuck in an SSO redirect loop showing ERR-4022. Our IdP config is unchanged. We need escalation to engineering.\n\nAccount ACC-10155, CloudSync Enterprise.\n\nSarah Okonkwo, Head of IT",
+            account="ACC-10155", product="CloudSync Enterprise",
+            category="authentication", priority="critical", confidence=0.91, score=5,
+            status="escalated", queue="auth-engineering",
+            error_codes=["ERR-4022"], symptoms=["SSO loop", "SAML redirect failure"],
+            summary="40 users on ACC-10155 locked out after the 2.6 update broke SSO (ERR-4022 redirect loop). IdP config unchanged — likely a regression in the SAML handler.",
+            draft="Hi Sarah,\n\nThis is being escalated to our auth engineering team as a P1 incident. ERR-4022 after the 2.6 update is a known regression we are actively patching.\n\nETA for a hotfix is 2 hours. I'll keep you updated every 30 minutes.\n\nSupportTriage AI",
+        ),
+        _t(
+            id="BG-E001", channel="email",
+            sender="james.wilson@techcorp.com",
+            subject="Dashboard completely unresponsive — ERR-5001 on every load",
+            body="Hi Support,\n\nSince Monday our analytics dashboard returns ERR-5001 on every load attempt. We have tested across five machines and two office networks. This is blocking our weekly reporting cycle — please treat as high priority.\n\nAccount ACC-10021, DataPilot Pro.\n\nJames Wilson",
+            account="ACC-10021", product="DataPilot Pro",
+            category="performance", priority="high", confidence=0.88, score=4,
+            status="human-review", queue="performance-team",
+            error_codes=["ERR-5001"], symptoms=["ERR-5001", "dashboard timeout"],
+            summary="Multiple users on ACC-10021 experiencing ERR-5001 on every dashboard load since Monday, affecting reporting cycle. Consistent across machines and networks.",
+            draft="Hi James,\n\nThank you for reporting this. ERR-5001 indicates a server-side timeout on the analytics rendering service. Our performance team is investigating a cluster-wide issue affecting DataPilot Pro dashboards.\n\nWe'll have an update within 4 hours.\n\nSupportTriage AI",
+        ),
+        _t(
+            id="BG-TG001", channel="telegram",
+            sender="@frustrated_dev_99",
+            subject="@DataPilot your API is DOWN again!! ERR-5001 #outage",
+            body="@DataPilot your API is DOWN again!! ERR-5001 on every call. dashboard timeout too. third time this month. fix this NOW!! #outage",
+            account="", product="DataPilot Pro",
+            category="performance", priority="high", confidence=0.82, score=4,
+            status="human-review", queue="performance-team",
+            error_codes=["ERR-5001"], symptoms=["ERR-5001", "dashboard timeout"],
+            summary="Telegram user reports repeated ERR-5001 outage — third occurrence this month. API and dashboard both down.",
+            draft="Hi,\n\nWe're aware of ERR-5001 affecting API calls and dashboards and our team is actively working on it. We apologise for the repeated disruption and will post a status update shortly.\n\nSupportTriage AI",
+        ),
+        _t(
+            id="BG-W002", channel="web",
+            sender="chat_session_5503",
+            subject="All my data from last month is gone",
+            body="Hello? I logged in this morning and all my reports from last month are missing. I didn't delete anything. Please help urgently.",
+            account="", product="DataPilot Pro",
+            category="data-loss", priority="high", confidence=0.79, score=4,
+            status="human-review", queue="data-engineering",
+            error_codes=[], symptoms=["missing data"],
+            summary="User reports all last-month reports have disappeared without any action on their part. Potential data-loss or permissions issue.",
+            draft="Hi,\n\nI'm sorry to hear your reports are missing. I've flagged this for our data team to investigate immediately. Please don't make any changes to your account in the meantime.\n\nWe'll update you within 2 hours.\n\nSupportTriage AI",
+        ),
+        _t(
+            id="BG-E003", channel="email",
+            sender="marcus.lee@retailgroup.com",
+            subject="Invoice INV-9021 overcharge by $480",
+            body="Hello,\n\nInvoice INV-9021 shows $1,680 but our contract is $1,200/month — an overcharge of $480. No service change was communicated. Please issue a corrected invoice within 48 hours.\n\nAccount ACC-10310, DataPilot Business.\n\nMarcus Lee",
+            account="ACC-10310", product="DataPilot Business",
+            category="billing", priority="medium", confidence=0.93, score=3,
+            status="auto-routed", queue="billing-team",
+            error_codes=[], symptoms=[],
+            summary="Customer billed $480 over contracted rate on INV-9021. No plan change was communicated. Requesting corrected invoice within 48 hours.",
+            draft="Hi Marcus,\n\nThank you for flagging this. I've passed INV-9021 to our billing team with a note to issue a corrected invoice within 48 hours.\n\nYou'll receive a confirmation email once it's resolved.\n\nSupportTriage AI",
+        ),
+        _t(
+            id="BG-W004", channel="web",
+            sender="contact_form_7034",
+            subject="Wrong charge on account",
+            body="Hi, I think I'm being charged the wrong amount. My bill says $240 but I thought the plan was $200/month. Can someone check please?",
+            account="", product="DataPilot Business",
+            category="billing", priority="low", confidence=0.90, score=2,
+            status="auto-routed", queue="billing-team",
+            error_codes=[], symptoms=[],
+            summary="Customer querying a $40 discrepancy on their monthly bill. Likely a plan price change that wasn't communicated.",
+            draft="Hi,\n\nThanks for reaching out. I've asked our billing team to review your account and confirm the correct charge. You'll hear back within 1 business day.\n\nSupportTriage AI",
+        ),
+        _t(
+            id="BG-W003", channel="web",
+            sender="chat_session_6112",
+            subject="Cant login — says invalid credentials",
+            body="hi i cant login. it says invalid credentials but im sure my password is right. tried resetting it twice. still blocked.",
+            account="", product="DataPilot Starter",
+            category="authentication", priority="medium", confidence=0.86, score=3,
+            status="auto-routed", queue="auth-support",
+            error_codes=[], symptoms=[],
+            summary="User locked out after two failed password resets. May have hit the 5-attempt lock or session cookie issue.",
+            draft="Hi,\n\nSorry you're having trouble logging in. Your account may be temporarily locked after multiple failed attempts — it auto-unlocks after 30 minutes. If you're still blocked after that, reply here and I'll unlock it manually.\n\nSupportTriage AI",
+        ),
+        _t(
+            id="BG-E007", channel="email",
+            sender="alex.novak@research.edu",
+            subject="Feature request: scheduled exports with email delivery",
+            body="Hi,\n\nOur team exports reports manually every Monday. Scheduled exports with email delivery to a distribution list would save us hours monthly. Happy to beta test.\n\nAccount ACC-10920, CloudSync Research.\n\nAlex Novak",
+            account="ACC-10920", product="CloudSync Research",
+            category="feature-request", priority="low", confidence=0.95, score=1,
+            status="auto-routed", queue="product-feedback",
+            error_codes=[], symptoms=[],
+            summary="User requests scheduled report exports with email delivery. Willing to beta test. No urgency.",
+            draft="Hi Alex,\n\nThank you for the suggestion! Scheduled exports are on our roadmap. I've added your vote and noted your interest in beta testing — our product team will reach out when it's available.\n\nSupportTriage AI",
+        ),
+    ]
+
+    demo_resolved = [
+        _t(
+            id="BG-E006", channel="email",
+            sender="linda.cho@mediafirm.co",
+            subject="Refund still not received after 4 weeks",
+            body="Hello Support,\n\nDowngraded from Enterprise to Business a month ago and was promised a $520 refund within 7 days. It is now week 4 and nothing received. Third ticket on this same issue.\n\nAccount ACC-10788.\n\nLinda Cho",
+            account="ACC-10788", product="CloudSync Enterprise",
+            category="billing", priority="medium", confidence=0.92, score=3,
+            status="resolved", queue="billing-team",
+            error_codes=[], symptoms=[],
+            summary="Customer chasing a $520 refund promised 4 weeks ago after downgrade. Third escalation on the same issue.",
+            draft="Hi Linda,\n\nI sincerely apologise for the delay. The refund of $520 has now been processed and should appear in your account within 3–5 business days.\n\nSupportTriage AI",
+            resolved=True,
+        ),
+    ]
+
+    st.session_state.inbox     = []
+    st.session_state.processed = [(t, r) for t, r in demo_processed]
+    st.session_state.resolved  = [(t, r) for t, r in demo_resolved]
+    st.session_state.log       = (
+        "[DEMO MODE] 9 tickets pre-triaged | 1 resolved\n"
+        "  [AUTO] [EMAIL    ] BG-E004  → data-engineering        | conf=0.97 | status=escalated\n"
+        "  [AUTO] [EMAIL    ] BG-E002  → auth-engineering        | conf=0.91 | status=escalated\n"
+        "  [AUTO] [EMAIL    ] BG-E001  → performance-team        | conf=0.88 | status=human-review\n"
+        "  [AUTO] [TELEGRAM ] BG-TG001 → performance-team        | conf=0.82 | status=human-review\n"
+        "  [AUTO] [WEB      ] BG-W002  → data-engineering        | conf=0.79 | status=human-review\n"
+        "  [AUTO] [EMAIL    ] BG-E003  → billing-team            | conf=0.93 | status=auto-routed\n"
+        "  [AUTO] [WEB      ] BG-W004  → billing-team            | conf=0.90 | status=auto-routed\n"
+        "  [AUTO] [WEB      ] BG-W003  → auth-support            | conf=0.86 | status=auto-routed\n"
+        "  [AUTO] [EMAIL    ] BG-E007  → product-feedback        | conf=0.95 | status=auto-routed\n"
+        "  [RESOLVED] BG-E006 by agent\n"
+    )
+    st.session_state.open_expanded_id = None
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Sidebar
@@ -639,6 +817,26 @@ with st.sidebar:
     )
 
     st.markdown("<div style='height:0.4rem'></div>", unsafe_allow_html=True)
+
+    # ── Demo Mode toggle ──────────────────────────────────────────────────────
+    _demo_on    = st.session_state.demo_mode
+    _demo_label = "🎬  Demo Mode: ON" if _demo_on else "🎬  Demo Mode: OFF"
+    _demo_help  = "Exit demo and reset to empty inbox" if _demo_on else "Load pre-triaged demo data instantly"
+    if st.button(_demo_label, use_container_width=True, key="demo_toggle", help=_demo_help):
+        if not _demo_on:
+            st.session_state.demo_mode = True
+            _load_demo_state()
+        else:
+            st.session_state.demo_mode = False
+            from intake.channels import generate_background_volume
+            st.session_state.inbox                  = generate_background_volume(15)
+            st.session_state.processed              = []
+            st.session_state.resolved               = []
+            st.session_state.log                    = ""
+            st.session_state.tg_last_id             = 0
+            st.session_state.auto_triage_last_fired = 0
+        st.rerun()
+
     st.markdown("<hr style='margin:0'>", unsafe_allow_html=True)
 
     # Channel status
@@ -768,8 +966,10 @@ with st.sidebar:
 
     st.markdown("<hr style='margin:0'>", unsafe_allow_html=True)
     st.markdown("<div style='padding:0.6rem 0.5rem'>", unsafe_allow_html=True)
+
     if st.button("↺  Reset All", use_container_width=True, key="reset_all"):
         from intake.channels import generate_background_volume
+        st.session_state.demo_mode              = False
         st.session_state.inbox                  = generate_background_volume(15)
         st.session_state.processed              = []
         st.session_state.resolved               = []
@@ -1256,6 +1456,7 @@ if page == "📥  Inbox":
                         "approved":     "pill-approved",
                     }.get(status, "pill-untriaged")
 
+                    _is_expanded = (t.id == st.session_state.open_expanded_id)
                     with st.expander(
                         "[{ps}]  {icon}  {tid}  —  {subj}{ell}".format(
                             ps=ps,
@@ -1263,8 +1464,9 @@ if page == "📥  Inbox":
                             tid=t.id, subj=t.subject[:62],
                             ell="…" if len(t.subject) > 62 else "",
                         ),
-                        expanded=False,
+                        expanded=_is_expanded,
                     ):
+                        st.session_state.open_expanded_id = t.id
                         # Ticket header row
                         st.markdown(
                             "<div style='display:flex;flex-wrap:wrap;gap:0.5rem;"
@@ -1381,6 +1583,14 @@ if page == "📥  Inbox":
                                 t.resolved = True
                                 t.status   = "resolved"
                                 _pair      = (t, r)
+                                # keep the view on the next ticket after this one
+                                _cur_pos = [x[1].id for x in vis_open].index(t.id)
+                                _remaining = [x[1].id for x in vis_open if x[1].id != t.id]
+                                st.session_state.open_expanded_id = (
+                                    _remaining[_cur_pos] if _cur_pos < len(_remaining)
+                                    else _remaining[_cur_pos - 1] if _remaining
+                                    else None
+                                )
                                 # move to resolved list
                                 st.session_state.resolved.append(_pair)
                                 # remove from processed

@@ -123,7 +123,14 @@ def init_store(persist_dir: str | None = None) -> Collection:
     if persist_dir is None:
         persist_dir = os.getenv("CHROMA_PERSIST_DIR", ".chromadb")
 
-    client = chromadb.PersistentClient(path=persist_dir)
+    try:
+        client = chromadb.PersistentClient(path=persist_dir)
+    except Exception as exc:
+        print(
+            f"[rag/store] PersistentClient failed ({exc}); "
+            "falling back to in-memory store."
+        )
+        client = chromadb.EphemeralClient()
     collection = client.get_or_create_collection(_COLLECTION_NAME)
 
     # Always upsert so edits to _SEED_DOCS are reflected on next run
