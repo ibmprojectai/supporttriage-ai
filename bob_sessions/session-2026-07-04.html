@@ -454,6 +454,22 @@
   </div>
 
   <!-- TASK 34 -->
+  <h2>Task 37 — Automated Triage Every N Tickets + Unified Workspace</h2>
+  <div class="task">
+    <div class="task-title"><span class="tag tag-done">done</span> Auto-triage engine + intelligent unified workspace</div>
+    <ul>
+      <li><strong>Auto-triage engine:</strong> Fires automatically on every Streamlit render when <code>len(inbox) &ge; threshold</code> and threshold hasn't already been fired. No polling loop needed — Streamlit's render cycle is the trigger. Default: 10 tickets.</li>
+      <li><strong>Sidebar controls:</strong> Toggle (ON/OFF) + <code>select_slider</code> [5, 10, 15, 20, 25, 30] threshold. Live fill-bar shows current queue vs threshold — green &rarr; amber &rarr; red as it approaches. "READY TO FIRE" label when full.</li>
+      <li><strong>Auto-triage status banner:</strong> Top of Inbox page — blue when ON (with fill bar + message), grey when OFF. "AUTO-TRIAGE COMPLETE" green confirmation card shows ticket count + elapsed time after every fire (manual or auto).</li>
+      <li><strong>Shared <code>_run_triage_pipeline()</code>:</strong> Extracted from both the auto-fire path and the manual button — single async pipeline function, eliminates duplication.</li>
+      <li><strong>Unified Workspace:</strong> After triage, the Inbox page becomes a full results workspace instead of an empty state. 3:1 split layout — left: searchable/filterable expander list of all triaged tickets; right: routing summary panel + "N tickets need review" alert.</li>
+      <li><strong>Per-ticket expander (AI Intelligence + Full Context):</strong> Left column — category/priority/confidence/queue/SLA data panel, confidence bar, error codes, symptoms, AI summary, AI draft reply preview (blue left-border box). Right column — original message body, thread messages (up to 4), account/product metadata.</li>
+      <li><strong>Queue destination chip:</strong> <code>&#8594; queue-name</code> monospace chip on every result row — agent sees routing instantly.</li>
+      <li><strong>Inline fill-bar in queue header:</strong> Shows <code>N% to auto-triage</code> progress inline with the "Triage Queue" heading while tickets are waiting.</li>
+      <li>64/64 tests still passing — 0 regressions. Commit <code>da5f879</code></li>
+    </ul>
+  </div>
+
   <h2>Task 36 — Intelligence Dashboard: Real-time Analytics, AI Trend Detection &amp; Predictive Analytics</h2>
   <div class="task">
     <div class="task-title"><span class="tag tag-done">done</span> Full analytics intelligence layer replacing static dashboard</div>
@@ -501,6 +517,12 @@
 
   <!-- GIT LOG -->
   <h2>Git Commit History</h2>
+
+  <div class="commit">
+    <span class="commit-hash">da5f879</span> <span class="commit-date">· 2026-07-04 23:00</span>
+    <div class="commit-msg">Task 37: Auto-triage every N tickets + unified workspace with AI suggestions and full context</div>
+    <div class="commit-files">ui/review_app.py — 543 insertions, 49 deletions</div>
+  </div>
 
   <div class="commit">
     <span class="commit-hash">1ca983e</span> <span class="commit-date">· 2026-07-04 22:00</span>
