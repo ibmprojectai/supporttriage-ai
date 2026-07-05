@@ -26,184 +26,224 @@ import streamlit as st
 
 # ── Page config ────────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="SupportTriage AI — Enterprise Ops",
+    page_title="SupportTriage AI",
     page_icon="🎫",
     layout="wide",
 )
 
-# ── CSS ────────────────────────────────────────────────────────────────────────
+# ── CSS — clean minimal dark palette ──────────────────────────────────────────
 st.markdown("""<style>
 /* ── Base ── */
-.stApp { background-color: #0a0a0a; color: #e8e8e8; }
+.stApp { background-color: #0d0d0d; color: #c9d1d9; }
 section[data-testid="stSidebar"] {
-    background-color: #0f0f0f;
-    border-right: 1px solid #1a1a1a;
+    background-color: #111117;
+    border-right: 1px solid #21262d;
 }
+#MainMenu, footer, header { visibility: hidden; }
 
-/* ── Sidebar nav radio ── */
-div[data-testid="stRadio"] > div { gap: 2px; }
+/* ── Sidebar nav ── */
+div[data-testid="stRadio"] > div { gap: 1px; }
 div[data-testid="stRadio"] label {
     background: transparent; border-radius: 6px;
-    padding: 0.45rem 0.75rem; color: #6f6f6f;
-    font-size: 0.88rem; cursor: pointer;
-    transition: background 0.15s; width: 100%; display: block;
+    padding: 0.48rem 0.85rem; color: #6e7681;
+    font-size: 0.83rem; font-weight: 500; cursor: pointer;
+    transition: all 0.12s; width: 100%; display: block;
 }
-div[data-testid="stRadio"] label:hover { background: #1a1a1a; color: #f4f4f4; }
+div[data-testid="stRadio"] label:hover { background: #1c2128; color: #e6edf3; }
 div[data-testid="stRadio"] label[data-checked="true"],
 div[data-testid="stRadio"] label[aria-checked="true"] {
-    background: #0f2040 !important; color: #4d94ff !important; font-weight: 600;
+    background: #1f3358 !important; color: #79c0ff !important; font-weight: 600;
 }
 
 /* ── Typography ── */
-h1, h2, h3, h4 { color: #f4f4f4; letter-spacing: -0.3px; }
+h1,h2,h3,h4 { color: #e6edf3; letter-spacing: -0.3px; font-weight: 700; }
 
 /* ── Metric cards ── */
 [data-testid="metric-container"] {
-    background: #141414; border: 1px solid #1f1f1f;
-    border-radius: 10px; padding: 1rem 1.2rem;
+    background: #161b22; border: 1px solid #30363d;
+    border-radius: 8px; padding: 0.9rem 1rem;
 }
-[data-testid="stMetricLabel"] { color: #525252 !important; font-size: 0.72rem !important;
-    text-transform: uppercase; letter-spacing: 0.6px; }
-[data-testid="stMetricValue"] { color: #f4f4f4 !important; font-size: 1.6rem !important;
-    font-weight: 700 !important; }
-[data-testid="stMetricDelta"] { font-size: 0.75rem !important; }
+[data-testid="stMetricLabel"] {
+    color: #6e7681 !important; font-size: 0.68rem !important;
+    text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600;
+}
+[data-testid="stMetricValue"] {
+    color: #e6edf3 !important; font-size: 1.5rem !important; font-weight: 700 !important;
+}
+[data-testid="stMetricDelta"] { font-size: 0.7rem !important; }
 
 /* ── Buttons ── */
 .stButton > button {
-    background: #0f62fe; color: #fff; border: none; border-radius: 6px;
-    padding: 0.45rem 1.1rem; font-weight: 600; font-size: 0.85rem;
-    transition: background 0.15s;
+    background: #1f6feb; color: #fff; border: none; border-radius: 6px;
+    padding: 0.4rem 1rem; font-weight: 600; font-size: 0.82rem;
+    transition: background 0.12s;
 }
-.stButton > button:hover { background: #0353e9; }
+.stButton > button:hover { background: #388bfd; }
 
 /* ── Inputs ── */
 .stTextInput > div > div > input,
 .stTextArea > div > div > textarea,
 .stSelectbox > div > div > div {
-    background: #141414 !important; color: #f4f4f4 !important;
-    border: 1px solid #2a2a2a !important; border-radius: 6px !important;
-    font-size: 0.88rem !important;
+    background: #0d1117 !important; color: #c9d1d9 !important;
+    border: 1px solid #30363d !important; border-radius: 6px !important;
+    font-size: 0.84rem !important;
+}
+.stTextInput > div > div > input:focus,
+.stTextArea > div > div > textarea:focus {
+    border-color: #388bfd !important; box-shadow: 0 0 0 3px #1f6feb22 !important;
 }
 
 /* ── Expanders ── */
 .streamlit-expanderHeader {
-    background: #141414 !important; color: #c6c6c6 !important;
-    border-radius: 8px !important; border: 1px solid #1f1f1f !important;
-    font-size: 0.88rem !important;
+    background: #161b22 !important; color: #c9d1d9 !important;
+    border-radius: 8px !important; border: 1px solid #30363d !important;
+    font-size: 0.84rem !important;
 }
-.streamlit-expanderContent { background: #0f0f0f !important; border: 1px solid #1a1a1a !important; }
+.streamlit-expanderContent {
+    background: #0d1117 !important; border: 1px solid #30363d !important;
+    border-top: none !important; border-radius: 0 0 8px 8px !important;
+}
 
 /* ── Divider ── */
-hr { border-color: #1a1a1a !important; margin: 0.8rem 0 !important; }
+hr { border-color: #21262d !important; margin: 0.75rem 0 !important; }
 
 /* ── Badges ── */
-.badge { display:inline-block; padding:1px 8px; border-radius:20px;
-    font-size:0.7rem; font-weight:700; margin-right:3px; letter-spacing:0.3px; }
-.badge-telegram { background:#0d2a3d; color:#4db8ff; border:1px solid #229ed944; }
-.badge-email    { background:#071428; color:#82b4ff; border:1px solid #0043ce44; }
-.badge-web      { background:#1a0a30; color:#c0a0ff; border:1px solid #6929c444; }
-.badge-critical { background:#280808; color:#ff8389; border:1px solid #fa4d5644; }
-.badge-high     { background:#281c00; color:#f5d87c; border:1px solid #f1c21b44; }
-.badge-medium   { background:#071428; color:#82b4ff; border:1px solid #0f62fe44; }
-.badge-low      { background:#071a0f; color:#74d08a; border:1px solid #42be6544; }
-.badge-auto-routed  { background:#071a0f; color:#74d08a; border:1px solid #42be6544; }
-.badge-human-review { background:#281c00; color:#f5d87c; border:1px solid #f1c21b44; }
-.badge-escalated    { background:#280808; color:#ff8389; border:1px solid #fa4d5644; }
-.badge-untriaged    { background:#141414; color:#525252; border:1px solid #222; }
-.badge-approved     { background:#071a0f; color:#74d08a; border:1px solid #42be6544; }
+.badge {
+    display: inline-block; padding: 1px 7px; border-radius: 4px;
+    font-size: 0.67rem; font-weight: 600; margin-right: 3px; letter-spacing: 0.2px;
+}
+.badge-telegram { background: #0d2238; color: #79c0ff; border: 1px solid #1f6feb44; }
+.badge-email    { background: #0d1a38; color: #a5d6ff; border: 1px solid #388bfd44; }
+.badge-web      { background: #1a0d38; color: #d2a8ff; border: 1px solid #8957e544; }
+.badge-critical { background: #3d0c0c; color: #ff7b72; border: 1px solid #f8514944; }
+.badge-high     { background: #3d2200; color: #ffa657; border: 1px solid #e3b34144; }
+.badge-medium   { background: #0d1a38; color: #79c0ff; border: 1px solid #1f6feb44; }
+.badge-low      { background: #0d2d0d; color: #56d364; border: 1px solid #238636; }
+.badge-auto-routed  { background: #0d2d0d; color: #56d364; border: 1px solid #23863644; }
+.badge-human-review { background: #3d2200; color: #ffa657; border: 1px solid #e3b34144; }
+.badge-escalated    { background: #3d0c0c; color: #ff7b72; border: 1px solid #f8514944; }
+.badge-untriaged    { background: #1c2128; color: #484f58; border: 1px solid #30363d; }
+.badge-approved     { background: #0d2d0d; color: #56d364; border: 1px solid #23863644; }
 
-/* ── SLA risk badges ── */
-.sla-critical { display:inline-block;padding:1px 7px;border-radius:10px;
-    font-size:0.68rem;font-weight:700;background:#280808;color:#ff8389;border:1px solid #fa4d5644; }
-.sla-high     { display:inline-block;padding:1px 7px;border-radius:10px;
-    font-size:0.68rem;font-weight:700;background:#281c00;color:#f5d87c;border:1px solid #f1c21b44; }
-.sla-ok       { display:inline-block;padding:1px 7px;border-radius:10px;
-    font-size:0.68rem;font-weight:700;background:#071a0f;color:#74d08a;border:1px solid #42be6544; }
+/* ── SLA badges ── */
+.sla-critical {
+    display: inline-block; padding: 1px 6px; border-radius: 4px;
+    font-size: 0.65rem; font-weight: 600;
+    background: #3d0c0c; color: #ff7b72; border: 1px solid #f8514944;
+}
+.sla-high {
+    display: inline-block; padding: 1px 6px; border-radius: 4px;
+    font-size: 0.65rem; font-weight: 600;
+    background: #3d2200; color: #ffa657; border: 1px solid #e3b34144;
+}
+.sla-ok {
+    display: inline-block; padding: 1px 6px; border-radius: 4px;
+    font-size: 0.65rem; font-weight: 600;
+    background: #0d2d0d; color: #56d364; border: 1px solid #23863644;
+}
 
 /* ── Inbox cards ── */
 .inbox-card {
-    background:#111; border:1px solid #1f1f1f; border-radius:8px;
-    padding:0.75rem 1rem; margin:0.2rem 0;
-    display:flex; gap:0.85rem; align-items:flex-start;
-    transition: border-color 0.15s, background 0.15s;
+    background: #161b22; border: 1px solid #30363d; border-radius: 8px;
+    padding: 0.65rem 0.9rem; margin: 0.15rem 0;
+    display: flex; gap: 0.75rem; align-items: flex-start;
+    transition: border-color 0.1s, background 0.1s;
 }
-.inbox-card:hover { border-color: #2a2a2a; background:#151515; }
-.inbox-card-telegram { border-left: 3px solid #229ed9 !important; }
-.inbox-card-email    { border-left: 3px solid #0f62fe !important; }
-.inbox-card-web      { border-left: 3px solid #6929c4 !important; }
+.inbox-card:hover { border-color: #388bfd44; background: #1c2128; }
+.inbox-card-telegram { border-left: 3px solid #79c0ff !important; }
+.inbox-card-email    { border-left: 3px solid #a5d6ff !important; }
+.inbox-card-web      { border-left: 3px solid #d2a8ff !important; }
 
-/* ── Stat card (dashboard) ── */
-.stat-card {
-    background:#111; border:1px solid #1f1f1f; border-radius:10px;
-    padding:1rem 1.2rem; text-align:center;
+/* ── AI Suggestion panel ── */
+.ai-suggestion {
+    background: #0d1f38; border: 1px solid #1f6feb55;
+    border-left: 3px solid #388bfd; border-radius: 8px;
+    padding: 0.85rem 1rem; margin-bottom: 0.6rem;
 }
-.stat-card-value { font-size:2rem; font-weight:700; color:#f4f4f4; line-height:1.1; }
-.stat-card-label { font-size:0.7rem; color:#525252; text-transform:uppercase;
-    letter-spacing:0.6px; margin-top:0.2rem; }
-.stat-card-sub   { font-size:0.78rem; color:#6f6f6f; margin-top:0.25rem; }
+.ai-suggestion-label {
+    font-size: 0.65rem; font-weight: 700; color: #79c0ff;
+    text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 0.4rem;
+    display: flex; align-items: center; gap: 0.35rem;
+}
+.ai-suggestion-text {
+    font-size: 0.82rem; color: #c9d1d9; line-height: 1.65;
+    white-space: pre-wrap; font-family: inherit;
+}
+
+/* ── Stat card ── */
+.stat-card {
+    background: #161b22; border: 1px solid #30363d; border-radius: 8px;
+    padding: 0.9rem 1rem; text-align: center;
+}
+.stat-card-value { font-size: 1.85rem; font-weight: 700; color: #e6edf3; line-height: 1.1; }
+.stat-card-label {
+    font-size: 0.65rem; color: #6e7681; text-transform: uppercase;
+    letter-spacing: 0.8px; margin-top: 0.2rem; font-weight: 600;
+}
+.stat-card-sub { font-size: 0.73rem; color: #484f58; margin-top: 0.2rem; }
 
 /* ── Outage banners ── */
 .outage-critical {
-    background:#150303; border:1px solid #fa4d5666; border-left:4px solid #fa4d56;
-    border-radius:8px; padding:1rem 1.2rem; margin:0.5rem 0;
+    background: #2d0c0c; border: 1px solid #f8514955;
+    border-left: 3px solid #ff7b72; border-radius: 8px;
+    padding: 0.85rem 1rem; margin: 0.4rem 0;
 }
 .outage-warning {
-    background:#150d00; border:1px solid #f1c21b44; border-left:4px solid #f1c21b;
-    border-radius:8px; padding:0.8rem 1.1rem; margin:0.4rem 0;
+    background: #2d1800; border: 1px solid #e3b34144;
+    border-left: 3px solid #ffa657; border-radius: 8px;
+    padding: 0.7rem 0.9rem; margin: 0.3rem 0;
 }
 
 /* ── Impact banner ── */
 .impact-banner {
-    background:linear-gradient(135deg,#001040,#0a2a7a);
-    padding:1.1rem 1.4rem; border-radius:10px; margin-bottom:1rem;
-    border: 1px solid #0f62fe33;
+    background: #0d1f38; border: 1px solid #1f6feb44;
+    padding: 0.9rem 1.2rem; border-radius: 8px; margin-bottom: 1rem;
 }
 
 /* ── Confidence bar ── */
-.conf-track { background:#1a1a1a; border-radius:4px; height:6px;
-    width:100%; margin-top:3px; overflow:hidden; }
+.conf-track {
+    background: #21262d; border-radius: 3px; height: 5px;
+    width: 100%; margin-top: 3px; overflow: hidden;
+}
 
 /* ── Terminal log ── */
 .terminal {
-    background:#050505; color:#3fb950;
-    font-family:"IBM Plex Mono","SFMono-Regular",Consolas,monospace;
-    font-size:0.78rem; padding:1rem; border-radius:8px;
-    white-space:pre-wrap; line-height:1.6;
-    border:1px solid #0d1f0d; max-height:500px; overflow-y:auto;
+    background: #0d1117; color: #56d364;
+    font-family: "SFMono-Regular", "Cascadia Code", Consolas, monospace;
+    font-size: 0.75rem; padding: 0.9rem; border-radius: 8px;
+    white-space: pre-wrap; line-height: 1.65;
+    border: 1px solid #238636; max-height: 400px; overflow-y: auto;
 }
 
 /* ── HITL card ── */
 .hitl-card {
-    background:#0d0a00; border:1px solid #f1c21b22;
-    border-left:3px solid #f1c21b; border-radius:8px;
-    padding:0.85rem 1.1rem; margin-bottom:0.6rem;
-}
-
-/* ── Queue table ── */
-.queue-row {
-    display:flex; align-items:center; gap:0.75rem;
-    padding:0.4rem 0.6rem; border-radius:6px;
-    background:#111; border:1px solid #1f1f1f; margin-bottom:4px;
-    font-size:0.82rem;
+    background: #161b22; border: 1px solid #e3b34122;
+    border-left: 3px solid #ffa657; border-radius: 8px;
+    padding: 0.75rem 1rem; margin-bottom: 0.5rem;
 }
 
 /* ── Status dot ── */
-.dot-on  { display:inline-block;width:7px;height:7px;border-radius:50%;background:#42be65;margin-right:6px; }
-.dot-off { display:inline-block;width:7px;height:7px;border-radius:50%;background:#2a2a2a;margin-right:6px; }
+.dot-on  { display:inline-block;width:6px;height:6px;border-radius:50%;background:#56d364;margin-right:5px; }
+.dot-off { display:inline-block;width:6px;height:6px;border-radius:50%;background:#30363d;margin-right:5px; }
 
 /* ── Stat row ── */
-.stat-row { display:flex;justify-content:space-between;align-items:center;
-    padding:0.3rem 0; border-bottom:1px solid #1a1a1a; }
-.stat-row:last-child { border-bottom:none; }
+.stat-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0.26rem 0; border-bottom: 1px solid #21262d;
+}
+.stat-row:last-child { border-bottom: none; }
 
-/* ── Section header ── */
+/* ── Section label ── */
 .section-header {
-    font-size:0.72rem; color:#525252; text-transform:uppercase;
-    letter-spacing:1px; margin:0 0 0.5rem 0; font-weight:600;
+    font-size: 0.65rem; color: #484f58; text-transform: uppercase;
+    letter-spacing: 1.2px; margin: 0 0 0.4rem 0; font-weight: 700;
 }
 
 /* ── Priority bar ── */
-.pri-bar-track { background:#1a1a1a; border-radius:3px; height:6px; flex:1; overflow:hidden; }
+.pri-bar-track { background: #21262d; border-radius: 2px; height: 5px; flex: 1; overflow: hidden; }
+
+/* ── Streamlit alerts ── */
+.stAlert { border-radius: 7px !important; font-size: 0.84rem !important; }
 </style>""", unsafe_allow_html=True)
 
 
@@ -212,22 +252,22 @@ hr { border-color: #1a1a1a !important; margin: 0.8rem 0 !important; }
 # ══════════════════════════════════════════════════════════════════════════════
 
 _CHANNEL_ICON  = {"telegram": "✈️", "email": "📧", "web": "🌐"}
-_CHANNEL_COLOR = {"telegram": "#229ed9", "email": "#4d94ff", "web": "#a78bfa"}
+_CHANNEL_COLOR = {"telegram": "#79c0ff", "email": "#a5d6ff", "web": "#d2a8ff"}
 _PRIORITY_COLOR = {
-    "critical": "#ff8389", "high": "#f5d87c",
-    "medium":   "#82b4ff", "low":  "#74d08a",
+    "critical": "#ff7b72", "high": "#ffa657",
+    "medium":   "#79c0ff", "low":  "#56d364",
 }
 _PRIORITY_SLA = {"critical": 2, "high": 8, "medium": 24, "low": 72}  # hours
 
 
 def _conf_bar_html(conf: float, width_px: int = 140) -> str:
-    color  = "#42be65" if conf > 0.85 else "#f1c21b" if conf >= 0.6 else "#fa4d56"
+    color  = "#56d364" if conf > 0.85 else "#ffa657" if conf >= 0.6 else "#ff7b72"
     filled = int(conf * width_px)
     return (
         "<div class='conf-track' style='width:{w}px'>"
-        "<div style='background:{c};height:6px;width:{f}px;border-radius:4px'></div>"
+        "<div style='background:{c};height:5px;width:{f}px;border-radius:3px'></div>"
         "</div>"
-        "<small style='color:{c};font-size:0.72rem'>{p}</small>"
+        "<small style='color:{c};font-size:0.7rem'>{p}</small>"
     ).format(w=width_px, c=color, f=filled, p="{:.0%}".format(conf))
 
 
@@ -240,8 +280,8 @@ def _ticket_badges(t) -> str:
         "<span class='badge badge-{ch}'>{CH}</span>"
         "<span class='badge badge-{pri}'>{PRI}</span>"
         "<span class='badge badge-{stat}'>{STAT}</span>"
-        "<span class='badge' style='background:#141414;color:#6f6f6f;"
-        "border:1px solid #222'>{cat}</span>"
+        "<span class='badge' style='background:#1c2128;color:#484f58;"
+        "border:1px solid #30363d'>{cat}</span>"
     ).format(ch=ch, CH=ch.upper(), pri=pri, PRI=pri.upper(),
              stat=stat, STAT=stat.upper(), cat=cat)
 
@@ -249,12 +289,10 @@ def _ticket_badges(t) -> str:
 def _sla_badge(priority: str) -> str:
     p = (priority or "medium").lower()
     if p == "critical":
-        return "<span class='sla-critical'>🔴 SLA: 2h</span>"
+        return "<span class='sla-critical'>SLA 2h</span>"
     if p == "high":
-        return "<span class='sla-high'>🟡 SLA: 8h</span>"
-    return "<span class='sla-ok'>🟢 SLA: {h}h</span>".format(
-        h=_PRIORITY_SLA.get(p, 24)
-    )
+        return "<span class='sla-high'>SLA 8h</span>"
+    return "<span class='sla-ok'>SLA {h}h</span>".format(h=_PRIORITY_SLA.get(p, 24))
 
 
 def _kpi_card(value: str, label: str, sub: str = "", color: str = "#f4f4f4") -> str:
@@ -305,10 +343,14 @@ if "openrouter_key" not in st.session_state:
 
 with st.sidebar:
     st.markdown(
-        "<div style='padding:1rem 0.5rem 0.5rem 0.5rem'>"
-        "<h3 style='color:#f4f4f4;margin:0;font-size:1rem;font-weight:700'>🎫 SupportTriage AI</h3>"
-        "<p style='color:#3d3d3d;font-size:0.68rem;margin:3px 0 0 0;letter-spacing:0.5px'>"
-        "ENTERPRISE OPERATIONS CENTER</p>"
+        "<div style='padding:1.1rem 0.75rem 0.6rem 0.75rem'>"
+        "<div style='display:flex;align-items:center;gap:0.4rem;margin-bottom:2px'>"
+        "<span style='font-size:1rem'>🎫</span>"
+        "<span style='color:#e6edf3;font-size:0.95rem;font-weight:700;letter-spacing:-0.2px'>"
+        "SupportTriage AI</span>"
+        "</div>"
+        "<span style='color:#30363d;font-size:0.62rem;letter-spacing:0.8px;font-weight:600'>"
+        "ENTERPRISE OPS CENTER</span>"
         "</div>",
         unsafe_allow_html=True,
     )
@@ -329,11 +371,11 @@ with st.sidebar:
         "<p class='section-header' style='padding:0 0.5rem'>Live Channels</p>",
         unsafe_allow_html=True,
     )
-    _tg_dot = "#42be65" if tg_connected else "#2a2a2a"
-    _tg_col = "#42be65" if tg_connected else "#525252"
+    _tg_dot = "#56d364" if tg_connected else "#30363d"
+    _tg_col = "#56d364" if tg_connected else "#6e7681"
     _tg_lbl = "<b>Connected</b>" if tg_connected else "Not configured"
-    _gm_dot = "#42be65" if gm_connected else "#2a2a2a"
-    _gm_col = "#42be65" if gm_connected else "#525252"
+    _gm_dot = "#56d364" if gm_connected else "#30363d"
+    _gm_col = "#56d364" if gm_connected else "#6e7681"
     _gm_lbl = "<b>Connected</b>" if gm_connected else "Not configured"
     st.markdown(
         "<div style='padding:0 0.5rem'>"
@@ -367,18 +409,18 @@ with st.sidebar:
         "<p class='section-header' style='padding:0 0.5rem'>Queue Summary</p>",
         unsafe_allow_html=True,
     )
-    _rc_col = "#f1c21b" if review_count else "#f4f4f4"
-    _ec_col = "#ff8389" if escalated_count else "#f4f4f4"
+    _rc_col = "#ffa657" if review_count else "#c9d1d9"
+    _ec_col = "#ff7b72" if escalated_count else "#c9d1d9"
     st.markdown(
         "<div style='padding:0 0.5rem'>"
-        "<div class='stat-row'><span style='color:#6f6f6f;font-size:0.78rem'>Inbox</span>"
-        "<span style='color:#f4f4f4;font-weight:700;font-size:0.85rem'>{inbox}</span></div>"
-        "<div class='stat-row'><span style='color:#6f6f6f;font-size:0.78rem'>Human Review</span>"
-        "<span style='color:{rc};font-weight:700;font-size:0.85rem'>{review}</span></div>"
-        "<div class='stat-row'><span style='color:#6f6f6f;font-size:0.78rem'>Escalated</span>"
-        "<span style='color:{ec};font-weight:700;font-size:0.85rem'>{esc}</span></div>"
-        "<div class='stat-row'><span style='color:#6f6f6f;font-size:0.78rem'>Processed</span>"
-        "<span style='color:#f4f4f4;font-weight:700;font-size:0.85rem'>{proc}</span></div>"
+        "<div class='stat-row'><span style='color:#6e7681;font-size:0.77rem'>Inbox</span>"
+        "<span style='color:#c9d1d9;font-weight:700;font-size:0.83rem'>{inbox}</span></div>"
+        "<div class='stat-row'><span style='color:#6e7681;font-size:0.77rem'>Human Review</span>"
+        "<span style='color:{rc};font-weight:700;font-size:0.83rem'>{review}</span></div>"
+        "<div class='stat-row'><span style='color:#6e7681;font-size:0.77rem'>Escalated</span>"
+        "<span style='color:{ec};font-weight:700;font-size:0.83rem'>{esc}</span></div>"
+        "<div class='stat-row'><span style='color:#6e7681;font-size:0.77rem'>Processed</span>"
+        "<span style='color:#c9d1d9;font-weight:700;font-size:0.83rem'>{proc}</span></div>"
         "</div>".format(
             inbox=inbox_count, rc=_rc_col, review=review_count,
             ec=_ec_col, esc=escalated_count, proc=processed_count,
@@ -402,22 +444,22 @@ with st.sidebar:
 
 st.markdown(
     "<div style='display:flex;justify-content:space-between;align-items:center;"
-    "padding:0.5rem 0 1rem 0;border-bottom:1px solid #1a1a1a;margin-bottom:1.5rem'>"
+    "padding:0.6rem 0 1.1rem 0;border-bottom:1px solid #21262d;margin-bottom:1.4rem'>"
     "<div>"
-    "<h1 style='color:#f4f4f4;margin:0;font-size:1.7rem;font-weight:700;letter-spacing:-0.5px'>"
-    "SupportTriage <span style='color:#0f62fe'>AI</span>"
+    "<h1 style='color:#e6edf3;margin:0;font-size:1.55rem;font-weight:700;letter-spacing:-0.4px'>"
+    "SupportTriage <span style='color:#388bfd'>AI</span>"
     "</h1>"
-    "<p style='color:#3d3d3d;margin:0;font-size:0.75rem;letter-spacing:0.3px'>"
-    "ENTERPRISE MULTI-CHANNEL OPERATIONS · IBM GRANITE 4.1 8B · HUMAN-IN-THE-LOOP"
+    "<p style='color:#484f58;margin:2px 0 0 0;font-size:0.72rem;letter-spacing:0.2px'>"
+    "Multi-channel · IBM Granite 4.1 · Human-in-the-Loop"
     "</p>"
     "</div>"
-    "<div style='display:flex;gap:0.5rem;align-items:center'>"
-    "<span style='background:#071a0f;color:#42be65;padding:3px 10px;border-radius:20px;"
-    "font-size:0.68rem;font-weight:700;border:1px solid #42be6533'>● LIVE</span>"
-    "<span style='background:#111;color:#525252;padding:3px 10px;border-radius:20px;"
-    "font-size:0.68rem;border:1px solid #1f1f1f'>IBM Granite 4.1 8B</span>"
-    "<span style='background:#111;color:#525252;padding:3px 10px;border-radius:20px;"
-    "font-size:0.68rem;border:1px solid #1f1f1f'>HITL · conf &gt; 85%</span>"
+    "<div style='display:flex;gap:0.4rem;align-items:center'>"
+    "<span style='background:#0d2d0d;color:#56d364;padding:3px 9px;border-radius:6px;"
+    "font-size:0.65rem;font-weight:700;border:1px solid #238636'>● LIVE</span>"
+    "<span style='background:#161b22;color:#6e7681;padding:3px 9px;border-radius:6px;"
+    "font-size:0.65rem;border:1px solid #30363d'>Granite 4.1 8B</span>"
+    "<span style='background:#161b22;color:#6e7681;padding:3px 9px;border-radius:6px;"
+    "font-size:0.65rem;border:1px solid #30363d'>HITL &gt;85%</span>"
     "</div>"
     "</div>",
     unsafe_allow_html=True,
@@ -1119,10 +1161,36 @@ elif page == "🧑‍💻 Review Queue":
                     index=0,
                     key="queue_select_{}".format(t.id),
                 )
+
+                # ── AI Suggestion Panel ──────────────────────────────────────
+                draft_key   = "draft_{}".format(t.id)
+                use_key     = "use_draft_{}".format(t.id)
+                ai_draft    = (t.draft_reply or "").strip()
+
+                if ai_draft and not ai_draft.startswith("[STUB]"):
+                    draft_preview = ai_draft[:420] + ("…" if len(ai_draft) > 420 else "")
+                    st.markdown(
+                        "<div class='ai-suggestion'>"
+                        "<div class='ai-suggestion-label'>&#10022; AI-generated draft</div>"
+                        "<div class='ai-suggestion-text'>{preview}</div>"
+                        "</div>".format(preview=_html.escape(draft_preview)),
+                        unsafe_allow_html=True,
+                    )
+                    if st.button(
+                        "✦ Use This Draft",
+                        key=use_key,
+                        use_container_width=True,
+                    ):
+                        st.session_state[draft_key] = ai_draft
+
+                # draft_key default: use ai_draft if not already set in session state
+                if draft_key not in st.session_state:
+                    st.session_state[draft_key] = ai_draft
+
                 edited_draft = st.text_area(
-                    "Draft", value=t.draft_reply or "", height=220,
+                    "Draft", height=220,
                     label_visibility="collapsed",
-                    key="draft_{}".format(t.id),
+                    key=draft_key,
                 )
                 if st.button(
                     "✅ Approve & Route",
