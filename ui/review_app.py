@@ -1006,49 +1006,332 @@ with st.sidebar:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# WALKTHROUGH ENGINE — advances automatically when demo_walk=True
-# Steps and durations (seconds):
-#   0  Inbox: 15 waiting tickets visible                    20 s
-#   1  Inbox: "running triage…" banner                      18 s
-#   2  Inbox: triage done, tickets classified               15 s
-#   3  Dashboard: KPIs, charts, outage radar                30 s
-#   4  Dashboard: scroll / stay to read                     25 s
-#   5  Review Queue: escalated tickets shown                25 s
-#   6  Review Queue: human-review tickets shown             25 s
-#   7  Open Tickets: browse open tickets                    20 s
-#   8  Open Tickets: mark one resolved                      15 s
-#   9  Dashboard: final state with resolved count           20 s
-#  10  Done — stop auto-play, show "Walkthrough complete"   —
+# GUIDED TOUR OVERLAY — injected via st.components when demo_walk=True
 # ══════════════════════════════════════════════════════════════════════════════
 
-_WALK_STEPS = [
-    # (duration_s, nav_page,              action_key)
-    (20, "📥  Inbox",        "show_inbox"),
-    (18, "📥  Inbox",        "triage_banner"),
-    (15, "📥  Inbox",        "triage_done"),
-    (30, "📊  Dashboard",    "dashboard_1"),
-    (25, "📊  Dashboard",    "dashboard_2"),
-    (25, "🧑‍💻  Review Queue", "review_escalated"),
-    (25, "🧑‍💻  Review Queue", "review_hitl"),
-    (20, "📥  Inbox",        "open_tickets"),
-    (15, "📥  Inbox",        "resolve_ticket"),
-    (20, "📊  Dashboard",    "dashboard_final"),
+# Tour steps: (nav_page, title, description, anchor_css_selector)
+_TOUR_STEPS = [
+    (
+        "📥  Inbox",
+        "Welcome to SupportTriage AI",
+        "This is the live multi-channel inbox. Support tickets arrive here from Email, Telegram, and Web Chat — all in one place, waiting to be triaged.",
+        None,
+    ),
+    (
+        "📥  Inbox",
+        "Waiting Inbox — 15 Tickets",
+        "Each row is an incoming ticket. You can see the sender, subject, channel icon, SLA risk badge, and a body preview. Without AI, an agent reads every single one manually.",
+        None,
+    ),
+    (
+        "📥  Inbox",
+        "Search & Filter",
+        "Agents can instantly search by subject or sender, and filter by priority or channel — so urgent tickets are never buried.",
+        None,
+    ),
+    (
+        "📥  Inbox",
+        "Run AI Triage",
+        "This button sends all tickets through the IBM Granite 4.1 pipeline — classify, extract, summarise, draft reply, and route — all in parallel. Takes seconds.",
+        None,
+    ),
+    (
+        "📥  Inbox",
+        "Triage Complete",
+        "Done. Every ticket now has a category, priority score (1–5), confidence rating, and has been routed to the right queue automatically. The inbox is clear.",
+        None,
+    ),
+    (
+        "📊  Dashboard",
+        "Executive Dashboard",
+        "The dashboard gives leadership a real-time view of the entire support operation — KPIs, SLA compliance, automation rate, and more.",
+        None,
+    ),
+    (
+        "📊  Dashboard",
+        "KPI Metrics",
+        "Key numbers at a glance: total tickets processed, average AI confidence, automation rate (tickets handled without human touch), and escalation rate.",
+        None,
+    ),
+    (
+        "📊  Dashboard",
+        "Outage Radar",
+        "The Outage Radar automatically groups tickets by shared error codes. When 3+ tickets share ERR-5001, it fires an outage alert — no one had to spot that manually.",
+        None,
+    ),
+    (
+        "📊  Dashboard",
+        "Category & Channel Breakdown",
+        "Bar charts show ticket volume by category (billing, auth, performance, data-loss) and by channel (email, web, Telegram) so you can see where demand is coming from.",
+        None,
+    ),
+    (
+        "🧑‍💻  Review Queue",
+        "Review Queue — Escalated Tickets",
+        "Critical tickets are escalated immediately. Here you see a data-loss P1 incident and a mass SSO lockout — both auto-detected and flagged without any agent involvement.",
+        None,
+    ),
+    (
+        "🧑‍💻  Review Queue",
+        "AI Summary & Draft Reply",
+        "For every ticket the AI writes a plain-English summary of the issue AND a full draft reply ready to send. The agent reviews, edits if needed, and approves in one click.",
+        None,
+    ),
+    (
+        "🧑‍💻  Review Queue",
+        "Human-in-the-Loop",
+        "Tickets where AI confidence is below 85% are held here for human review before routing. This is the safety net — quality stays high even when the AI is uncertain.",
+        None,
+    ),
+    (
+        "📥  Inbox",
+        "Open Tickets Tab",
+        "All triaged, in-progress tickets live here sorted by priority score. Expand any ticket to see full context, error codes, AI summary, and the draft reply.",
+        None,
+    ),
+    (
+        "📥  Inbox",
+        "Mark Resolved",
+        "When a ticket is handled the agent clicks Mark Resolved. It moves to the Resolved tab and the view stays exactly where it was — ready for the next ticket.",
+        None,
+    ),
+    (
+        "📊  Dashboard",
+        "Live Dashboard — Final State",
+        "The dashboard updates in real time. Resolved count is up, open queue is smaller. This is what your support operation looks like when AI handles triage and humans focus on judgment.",
+        None,
+    ),
+    (
+        "📊  Dashboard",
+        "Tour Complete!",
+        "That's SupportTriage AI — multi-channel intake, IBM Granite-powered triage, human-in-the-loop review, outage detection, and real-time operations visibility. All in one platform.",
+        None,
+    ),
 ]
+
+def _render_guided_tour(step: int) -> None:
+    """Inject the full-screen guided tour overlay for the current step."""
+    import streamlit.components.v1 as components
+
+    total = len(_TOUR_STEPS)
+    if step >= total:
+        return
+
+    _, title, description, _ = _TOUR_STEPS[step]
+    pct = int((step + 1) / total * 100)
+    is_last = step == total - 1
+
+    html = """
+<style>
+  * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+  body {{ background: transparent; font-family: -apple-system, "Segoe UI", system-ui, sans-serif; }}
+
+  .overlay {{
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 99998;
+    pointer-events: none;
+  }}
+
+  .tour-card {{
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(560px, 92vw);
+    background: #0d1526;
+    border: 1px solid #2563eb;
+    border-top: 3px solid #2563eb;
+    border-radius: 12px;
+    padding: 1.2rem 1.4rem 1rem;
+    z-index: 99999;
+    box-shadow: 0 8px 40px rgba(37,99,235,0.35);
+    pointer-events: all;
+  }}
+
+  .tour-step-label {{
+    font-size: 11px;
+    font-weight: 700;
+    color: #2563eb;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 0.45rem;
+  }}
+
+  .tour-title {{
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #f1f5f9;
+    margin-bottom: 0.5rem;
+  }}
+
+  .tour-desc {{
+    font-size: 0.82rem;
+    color: #94a3b8;
+    line-height: 1.65;
+    margin-bottom: 0.9rem;
+  }}
+
+  .tour-progress-bg {{
+    background: #1e2d45;
+    border-radius: 4px;
+    height: 4px;
+    margin-bottom: 0.85rem;
+    overflow: hidden;
+  }}
+
+  .tour-progress-fill {{
+    background: #2563eb;
+    height: 4px;
+    border-radius: 4px;
+    width: {pct}%;
+    transition: width 0.4s;
+  }}
+
+  .tour-actions {{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }}
+
+  .tour-counter {{
+    font-size: 0.72rem;
+    color: #475569;
+  }}
+
+  .tour-buttons {{
+    display: flex;
+    gap: 0.5rem;
+  }}
+
+  .btn {{
+    border: none;
+    border-radius: 7px;
+    padding: 6px 16px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }}
+  .btn:hover {{ opacity: 0.85; }}
+
+  .btn-skip {{
+    background: transparent;
+    color: #475569;
+    border: 1px solid #1e2d45;
+  }}
+
+  .btn-next {{
+    background: #2563eb;
+    color: #fff;
+  }}
+
+  .btn-finish {{
+    background: #16a34a;
+    color: #fff;
+  }}
+
+  /* Arrow pointing up from card toward highlighted area */
+  .tour-arrow {{
+    position: fixed;
+    bottom: calc(32px + 1px);
+    left: 50%;
+    transform: translateX(-50%) translateY(100%);
+    width: 0;
+    height: 0;
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+    border-top: 10px solid #2563eb;
+    z-index: 99999;
+  }}
+
+  /* Pulsing highlight ring shown in top-centre of viewport */
+  .tour-beacon {{
+    position: fixed;
+    top: 140px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 3px solid #2563eb;
+    z-index: 99999;
+    pointer-events: none;
+    animation: pulse 1.4s ease-in-out infinite;
+  }}
+
+  @keyframes pulse {{
+    0%   {{ box-shadow: 0 0 0 0 rgba(37,99,235,0.7); opacity: 1; }}
+    70%  {{ box-shadow: 0 0 0 18px rgba(37,99,235,0); opacity: 0.8; }}
+    100% {{ box-shadow: 0 0 0 0 rgba(37,99,235,0); opacity: 1; }}
+  }}
+
+  /* Auto-advance timer bar */
+  .timer-bar-bg {{
+    background: #1e2d45;
+    border-radius: 2px;
+    height: 2px;
+    margin-bottom: 0.6rem;
+    overflow: hidden;
+  }}
+  .timer-bar-fill {{
+    background: #60a5fa;
+    height: 2px;
+    border-radius: 2px;
+    animation: drain {duration}s linear forwards;
+  }}
+  @keyframes drain {{
+    from {{ width: 100%; }}
+    to   {{ width: 0%; }}
+  }}
+</style>
+
+<div class="overlay"></div>
+<div class="tour-beacon"></div>
+
+<div class="tour-card">
+  <div class="tour-step-label">Step {step_num} of {total}</div>
+  <div class="tour-title">{title}</div>
+  <div class="tour-desc">{description}</div>
+  <div class="tour-progress-bg"><div class="tour-progress-fill"></div></div>
+  <div class="timer-bar-bg"><div class="timer-bar-fill"></div></div>
+  <div class="tour-actions">
+    <span class="tour-counter">{pct}% complete</span>
+    <div class="tour-buttons">
+      <button class="btn btn-skip" onclick="window.parent.postMessage({{type:'tour',action:'skip'}}, '*')">✕ Exit Tour</button>
+      <button class="btn {next_cls}" onclick="window.parent.postMessage({{type:'tour',action:'next'}}, '*')">{next_label}</button>
+    </div>
+  </div>
+</div>
+""".format(
+        pct=pct,
+        step_num=step + 1,
+        total=total,
+        title=title,
+        description=description,
+        duration=18,
+        next_cls="btn-finish" if is_last else "btn-next",
+        next_label="Finish Tour" if is_last else "Next →",
+    )
+
+    components.html(html, height=0, scrolling=False)
+
 
 if st.session_state.demo_walk:
     _step    = st.session_state.demo_step
     _step_ts = st.session_state.demo_step_ts
     _elapsed = time.time() - _step_ts
+    _total   = len(_TOUR_STEPS)
 
-    if _step < len(_WALK_STEPS):
-        _dur, _nav, _action = _WALK_STEPS[_step]
+    if _step < _total:
+        _nav = _TOUR_STEPS[_step][0]
 
-        # ── execute side-effects for this step (only once, on entry) ──────────
-        if _elapsed < 0.5:   # "on entry" window
-            if _action == "triage_done":
+        # ── side-effects on entry ─────────────────────────────────────────────
+        if _elapsed < 0.5:
+            if _step == 4:    # triage done — load full demo data
                 _load_demo_state()
-            elif _action == "resolve_ticket":
-                # mark the first open ticket resolved
+            elif _step == 13: # resolve one ticket
                 if st.session_state.processed:
                     _rt, _rr = st.session_state.processed[0]
                     _rt.resolved = True
@@ -1056,21 +1339,18 @@ if st.session_state.demo_walk:
                     st.session_state.resolved.append((_rt, _rr))
                     st.session_state.processed.pop(0)
 
-        # ── navigate ──────────────────────────────────────────────────────────
         st.session_state._nav_page = _nav
 
-        # ── advance when duration expires ─────────────────────────────────────
-        if _elapsed >= _dur:
+        # auto-advance every 18 s
+        if _elapsed >= 18:
             st.session_state.demo_step    = _step + 1
             st.session_state.demo_step_ts = time.time()
-            time.sleep(0.1)
+            time.sleep(0.05)
             st.rerun()
         else:
-            # schedule next rerun after remaining time
-            time.sleep(min(1.0, _dur - _elapsed))
+            time.sleep(min(1.0, 18 - _elapsed))
             st.rerun()
     else:
-        # walkthrough finished
         st.session_state.demo_walk = False
         st.session_state.demo_step = 0
         st.session_state._nav_page = "📊  Dashboard"
@@ -1109,52 +1389,9 @@ st.markdown(
 # ── strip leading spaces from radio labels for page matching ──────────────────
 page = page.strip()
 
-# ── Walkthrough progress bar & step narration ─────────────────────────────────
+# ── Guided tour overlay ────────────────────────────────────────────────────────
 if st.session_state.demo_walk:
-    _ws  = st.session_state.demo_step
-    _total_steps = len(_WALK_STEPS)
-    _pct = int(_ws / _total_steps * 100)
-    _narrations = [
-        "📥  Inbox — 15 support tickets waiting in the queue",
-        "⚙️  Running AI Triage — classifying, scoring and routing all tickets…",
-        "✅  Triage complete — all tickets classified, prioritised and routed",
-        "📊  Dashboard — KPIs, SLA analytics and outage radar",
-        "📊  Dashboard — category breakdown, channel mix, automation rate",
-        "🚨  Review Queue — escalated critical tickets",
-        "🧑‍💻  Review Queue — human-review tickets with AI draft replies",
-        "📂  Open Tickets — browsing triaged queue",
-        "✔️  Resolving a ticket — marking as done",
-        "📊  Final Dashboard — updated with resolved count",
-    ]
-    _narration = _narrations[_ws] if _ws < len(_narrations) else ""
-    st.markdown(
-        "<div style='background:#0d1526;border:1px solid #1e3a6e;border-radius:8px;"
-        "padding:0.6rem 1rem;margin-bottom:1rem'>"
-        "<div style='display:flex;justify-content:space-between;align-items:center;"
-        "margin-bottom:0.35rem'>"
-        "<span style='color:#60a5fa;font-size:0.78rem;font-weight:700'>"
-        "🎬 DEMO WALKTHROUGH &nbsp;·&nbsp; Step {s}/{t}</span>"
-        "<span style='color:#475569;font-size:0.72rem'>{narr}</span>"
-        "</div>"
-        "<div style='background:#1e2d45;border-radius:4px;height:5px;overflow:hidden'>"
-        "<div style='background:#2563eb;height:5px;width:{pct}%;border-radius:4px;"
-        "transition:width 0.5s'></div>"
-        "</div>"
-        "</div>".format(s=_ws + 1, t=_total_steps, narr=_narration, pct=_pct),
-        unsafe_allow_html=True,
-    )
-
-# ── Triage-running banner (walkthrough step 1) ────────────────────────────────
-if st.session_state.demo_walk and st.session_state.demo_step == 1:
-    st.markdown(
-        "<div style='background:#0d1f0d;border:1px solid #166534;border-radius:8px;"
-        "padding:0.75rem 1rem;margin-bottom:1rem;display:flex;align-items:center;gap:0.6rem'>"
-        "<span style='font-size:1rem'>⚙️</span>"
-        "<span style='color:#4ade80;font-weight:700;font-size:0.85rem'>"
-        "AI Triage running — classifying all 15 tickets with IBM Granite 4.1…</span>"
-        "</div>",
-        unsafe_allow_html=True,
-    )
+    _render_guided_tour(st.session_state.demo_step)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # AUTO-TRIAGE ENGINE  — fires automatically when inbox >= threshold
