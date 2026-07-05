@@ -454,6 +454,24 @@
   </div>
 
   <!-- TASK 34 -->
+  <h2>Task 35 — NinjaOne-Grade Enterprise UI Overhaul</h2>
+  <div class="task">
+    <div class="task-title"><span class="tag tag-done">done</span> Full design system rework — inspired by NinjaOne enterprise aesthetic</div>
+    <ul>
+      <li><strong>Background & surface palette:</strong> Deep navy <code>#0b1120</code> base, <code>#111d30</code> cards, <code>#1e2d45</code> borders — gives depth, not pure black harshness.</li>
+      <li><strong>Inter font via Google Fonts:</strong> The same clean geometric sans-serif used by Vercel, Linear, NinjaOne — tight letter-spacing on headings, 800 weight for KPI numbers.</li>
+      <li><strong>Top-border accent cards:</strong> All cards (KPI panels, HITL header, AI suggestion, outage banners) use a <code>2px</code> coloured top border instead of a left border — matches NinjaOne's panel language exactly.</li>
+      <li><strong>Rounded pill badges:</strong> Replaced square badges with <code>border-radius:20px</code> pills — softer, more modern, colour-coded by severity.</li>
+      <li><strong>Ticket rows with priority top-stripe:</strong> <code>.tkt-row-critical/high/medium/low</code> — each row's top 2px colour instantly communicates urgency at a glance.</li>
+      <li><strong>Data panel component:</strong> <code>.data-panel</code> / <code>.dp-row</code> — clean key/value table in the Review Queue AI reasoning section, no markdown table.</li>
+      <li><strong>Sidebar logo block:</strong> Blue square icon tile + wordmark + subtitle — matches NinjaOne sidebar brand treatment.</li>
+      <li><strong>Section labels:</strong> <code>.sec-lbl</code> — 0.63rem, uppercase, 1.4px letter-spacing, slate-400 — NinjaOne's exact section divider style.</li>
+      <li><strong>Confidence gauge:</strong> Full-width 10px bar in a <code>.kpi-panel</code> with blue top accent, threshold marker at 85%.</li>
+      <li><strong>Status dots with glow:</strong> Active channel dots now have a <code>box-shadow</code> green glow — hardware-status feel.</li>
+      <li>64/64 tests still passing — 0 regressions. Commit <code>fd0136f</code></li>
+    </ul>
+  </div>
+
   <h2>Task 34 — Clean Dark Palette + AI Suggestion Panel</h2>
   <div class="task">
     <div class="task-title"><span class="tag tag-done">done</span> CSS overhaul &amp; Review Queue AI suggestion panel</div>
@@ -468,6 +486,12 @@
 
   <!-- GIT LOG -->
   <h2>Git Commit History</h2>
+
+  <div class="commit">
+    <span class="commit-hash">fd0136f</span> <span class="commit-date">· 2026-07-04 21:00</span>
+    <div class="commit-msg">Task 35: NinjaOne-grade enterprise UI overhaul — navy/slate palette, Inter font, top-border cards, pill badges, premium data panels</div>
+    <div class="commit-files">ui/review_app.py — 606 insertions, 500 deletions</div>
+  </div>
 
   <div class="commit">
     <span class="commit-hash">5e9ed07</span> <span class="commit-date">· 2026-07-04 20:00</span>
