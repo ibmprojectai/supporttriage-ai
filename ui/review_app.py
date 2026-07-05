@@ -1216,43 +1216,7 @@ def _render_guided_tour(step: int) -> None:
     )
 
 
-if st.session_state.demo_walk:
-    _step    = st.session_state.demo_step
-    _step_ts = st.session_state.demo_step_ts
-    _elapsed = time.time() - _step_ts
-    _total   = len(_TOUR_STEPS)
-
-    if _step < _total:
-        _nav = _TOUR_STEPS[_step][0]
-
-        # ── side-effects on entry ─────────────────────────────────────────────
-        if _elapsed < 0.5:
-            if _step == 4:    # triage done — load full demo data
-                _load_demo_state()
-            elif _step == 13: # resolve one ticket
-                if st.session_state.processed:
-                    _rt, _rr = st.session_state.processed[0]
-                    _rt.resolved = True
-                    _rt.status   = "resolved"
-                    st.session_state.resolved.append((_rt, _rr))
-                    st.session_state.processed.pop(0)
-
-        st.session_state._nav_page = _nav
-
-        # auto-advance every 18 s
-        if _elapsed >= 10:
-            st.session_state.demo_step    = _step + 1
-            st.session_state.demo_step_ts = time.time()
-            time.sleep(0.05)
-            st.rerun()
-        else:
-            time.sleep(min(1.0, 10 - _elapsed))
-            st.rerun()
-    else:
-        st.session_state.demo_walk = False
-        st.session_state.demo_step = 0
-        st.session_state._nav_page = "📊  Dashboard"
-        st.rerun()
+# walkthrough engine runs at END of script — see bottom of file
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -2821,3 +2785,43 @@ st.markdown(
     "</p>",
     unsafe_allow_html=True,
 )
+
+# ══════════════════════════════════════════════════════════════════════════════
+# WALKTHROUGH ENGINE — runs LAST so page content renders before rerun
+# ══════════════════════════════════════════════════════════════════════════════
+
+if st.session_state.get("demo_walk"):
+    _step    = st.session_state.demo_step
+    _step_ts = st.session_state.demo_step_ts
+    _elapsed = time.time() - _step_ts
+    _total   = len(_TOUR_STEPS)
+
+    if _step < _total:
+        # side-effects — run once on entry to each step
+        if _elapsed < 1.5:
+            if _step == 4:
+                _load_demo_state()
+            elif _step == 13:
+                if st.session_state.processed:
+                    _rt, _rr = st.session_state.processed[0]
+                    _rt.resolved = True
+                    _rt.status   = "resolved"
+                    st.session_state.resolved.append((_rt, _rr))
+                    st.session_state.processed.pop(0)
+
+        # advance page nav
+        st.session_state._nav_page = _TOUR_STEPS[_step][0]
+
+        if _elapsed >= 10:
+            st.session_state.demo_step    = _step + 1
+            st.session_state.demo_step_ts = time.time()
+            st.rerun()
+        else:
+            # page has rendered — now sleep then rerun
+            time.sleep(min(1.0, 10 - _elapsed))
+            st.rerun()
+    else:
+        st.session_state.demo_walk = False
+        st.session_state.demo_step = 0
+        st.session_state._nav_page = "📊  Dashboard"
+        st.rerun()
