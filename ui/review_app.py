@@ -645,7 +645,7 @@ def _load_demo_state() -> None:
             resolved=resolved,
         )
         r = {"queue": queue, "status": status, "escalate": score == 5,
-             "tags": [category, priority]}
+             "tags": [category, priority], "severity_impact": score * 2}
         return t, r
 
     demo_processed = [
@@ -2673,7 +2673,7 @@ elif page == "🧑‍💻  Review Queue":
                 "</div>"
                 "</div>".format(
                     pills=_pills(t), sender=sender_safe,
-                    cc=conf_color, sev=r["severity_impact"], conf=conf,
+                    cc=conf_color, sev=r.get("severity_impact", 5), conf=conf,
                 ),
                 unsafe_allow_html=True,
             )
