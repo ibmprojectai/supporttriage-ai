@@ -1010,11 +1010,20 @@ if page == "📥  Inbox":
         st.rerun()
 
     # Button 2 — Enable / disable auto-triage
+    # Label is fixed so Streamlit never loses the widget between reruns.
+    # State is shown via colour: green pill when ON, grey when OFF.
     _at_on  = st.session_state.auto_triage_enabled
     _at_thr = st.session_state.auto_triage_threshold
-    _at_lbl = "Auto-Triage ON (every {})".format(_at_thr) if _at_on else "Auto-Triage OFF"
-    _at_typ = "secondary"
-    if ctl2.button(_at_lbl, use_container_width=True, key="at_toggle_btn", type=_at_typ):
+    _at_pill_col  = "#166534" if _at_on else "#1e2d45"
+    _at_pill_text = "ON  ✓  every {}".format(_at_thr) if _at_on else "OFF"
+    ctl2.markdown(
+        "<div style='font-size:0.72rem;color:#94a3b8;margin-bottom:2px'>Auto-Triage</div>"
+        "<div style='background:{c};border-radius:4px;padding:2px 8px;"
+        "font-size:0.75rem;font-weight:700;color:#f1f5f9;display:inline-block'>"
+        "{t}</div>".format(c=_at_pill_col, t=_at_pill_text),
+        unsafe_allow_html=True,
+    )
+    if ctl2.button("Toggle", use_container_width=True, key="at_toggle_btn"):
         st.session_state.auto_triage_enabled = not _at_on
         st.rerun()
 
