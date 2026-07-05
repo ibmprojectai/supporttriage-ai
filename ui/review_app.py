@@ -1110,9 +1110,7 @@ _TOUR_STEPS = [
 ]
 
 def _render_guided_tour(step: int) -> None:
-    """Inject the full-screen guided tour overlay for the current step."""
-    import streamlit.components.v1 as components
-
+    """Render the guided tour card directly into the Streamlit page."""
     total = len(_TOUR_STEPS)
     if step >= total:
         return
@@ -1120,202 +1118,102 @@ def _render_guided_tour(step: int) -> None:
     _, title, description, _ = _TOUR_STEPS[step]
     pct = int((step + 1) / total * 100)
     is_last = step == total - 1
+    bar_w   = pct
 
-    html = """
+    st.markdown(
+        """
 <style>
-  * {{ box-sizing: border-box; margin: 0; padding: 0; }}
-  body {{ background: transparent; font-family: -apple-system, "Segoe UI", system-ui, sans-serif; }}
-
-  .overlay {{
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.55);
-    z-index: 99998;
-    pointer-events: none;
-  }}
-
-  .tour-card {{
-    position: fixed;
-    bottom: 32px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: min(560px, 92vw);
-    background: #0d1526;
-    border: 1px solid #2563eb;
-    border-top: 3px solid #2563eb;
-    border-radius: 12px;
-    padding: 1.2rem 1.4rem 1rem;
-    z-index: 99999;
-    box-shadow: 0 8px 40px rgba(37,99,235,0.35);
-    pointer-events: all;
-  }}
-
-  .tour-step-label {{
-    font-size: 11px;
-    font-weight: 700;
-    color: #2563eb;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    margin-bottom: 0.45rem;
-  }}
-
-  .tour-title {{
-    font-size: 1.05rem;
-    font-weight: 700;
-    color: #f1f5f9;
-    margin-bottom: 0.5rem;
-  }}
-
-  .tour-desc {{
-    font-size: 0.82rem;
-    color: #94a3b8;
-    line-height: 1.65;
-    margin-bottom: 0.9rem;
-  }}
-
-  .tour-progress-bg {{
-    background: #1e2d45;
-    border-radius: 4px;
-    height: 4px;
-    margin-bottom: 0.85rem;
-    overflow: hidden;
-  }}
-
-  .tour-progress-fill {{
-    background: #2563eb;
-    height: 4px;
-    border-radius: 4px;
-    width: {pct}%;
-    transition: width 0.4s;
-  }}
-
-  .tour-actions {{
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }}
-
-  .tour-counter {{
-    font-size: 0.72rem;
-    color: #475569;
-  }}
-
-  .tour-buttons {{
-    display: flex;
-    gap: 0.5rem;
-  }}
-
-  .btn {{
-    border: none;
-    border-radius: 7px;
-    padding: 6px 16px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: opacity 0.15s;
-  }}
-  .btn:hover {{ opacity: 0.85; }}
-
-  .btn-skip {{
-    background: transparent;
-    color: #475569;
-    border: 1px solid #1e2d45;
-  }}
-
-  .btn-next {{
-    background: #2563eb;
-    color: #fff;
-  }}
-
-  .btn-finish {{
-    background: #16a34a;
-    color: #fff;
-  }}
-
-  /* Arrow pointing up from card toward highlighted area */
-  .tour-arrow {{
-    position: fixed;
-    bottom: calc(32px + 1px);
-    left: 50%;
-    transform: translateX(-50%) translateY(100%);
-    width: 0;
-    height: 0;
-    border-left: 10px solid transparent;
-    border-right: 10px solid transparent;
-    border-top: 10px solid #2563eb;
-    z-index: 99999;
-  }}
-
-  /* Pulsing highlight ring shown in top-centre of viewport */
-  .tour-beacon {{
-    position: fixed;
-    top: 140px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    border: 3px solid #2563eb;
-    z-index: 99999;
-    pointer-events: none;
-    animation: pulse 1.4s ease-in-out infinite;
-  }}
-
-  @keyframes pulse {{
-    0%   {{ box-shadow: 0 0 0 0 rgba(37,99,235,0.7); opacity: 1; }}
-    70%  {{ box-shadow: 0 0 0 18px rgba(37,99,235,0); opacity: 0.8; }}
-    100% {{ box-shadow: 0 0 0 0 rgba(37,99,235,0); opacity: 1; }}
-  }}
-
-  /* Auto-advance timer bar */
-  .timer-bar-bg {{
-    background: #1e2d45;
-    border-radius: 2px;
-    height: 2px;
-    margin-bottom: 0.6rem;
-    overflow: hidden;
-  }}
-  .timer-bar-fill {{
-    background: #60a5fa;
-    height: 2px;
-    border-radius: 2px;
-    animation: drain {duration}s linear forwards;
-  }}
-  @keyframes drain {{
-    from {{ width: 100%; }}
-    to   {{ width: 0%; }}
-  }}
+@keyframes __pulse {{
+  0%   {{ box-shadow: 0 0 0 0 rgba(37,99,235,0.8); }}
+  70%  {{ box-shadow: 0 0 0 20px rgba(37,99,235,0); }}
+  100% {{ box-shadow: 0 0 0 0 rgba(37,99,235,0); }}
+}}
+@keyframes __drain {{
+  from {{ width: 100%; }}
+  to   {{ width: 0%; }}
+}}
+.__tour-wrap {{
+  position: relative;
+  background: #0b1629;
+  border: 1px solid #2563eb;
+  border-top: 3px solid #2563eb;
+  border-radius: 12px;
+  padding: 1.2rem 1.4rem 1rem;
+  margin-bottom: 1.2rem;
+  box-shadow: 0 4px 32px rgba(37,99,235,0.25);
+}}
+.__tour-beacon {{
+  display: inline-block;
+  width: 14px; height: 14px;
+  background: #2563eb;
+  border-radius: 50%;
+  margin-right: 8px;
+  vertical-align: middle;
+  animation: __pulse 1.4s ease-in-out infinite;
+}}
+.__tour-label {{
+  font-size: 11px; font-weight: 700;
+  color: #2563eb; letter-spacing: 1px;
+  text-transform: uppercase; margin-bottom: 0.4rem;
+}}
+.__tour-title {{
+  font-size: 1.1rem; font-weight: 800;
+  color: #f1f5f9; margin-bottom: 0.45rem;
+}}
+.__tour-desc {{
+  font-size: 0.85rem; color: #94a3b8;
+  line-height: 1.7; margin-bottom: 0.9rem;
+}}
+.__tour-prog-bg {{
+  background: #1e2d45; border-radius: 4px;
+  height: 5px; margin-bottom: 0.5rem; overflow: hidden;
+}}
+.__tour-prog-fill {{
+  background: #2563eb; height: 5px;
+  border-radius: 4px; width: {bar_w}%;
+}}
+.__tour-timer-bg {{
+  background: #1e2d45; border-radius: 2px;
+  height: 3px; margin-bottom: 0.8rem; overflow: hidden;
+}}
+.__tour-timer-fill {{
+  background: #60a5fa; height: 3px; border-radius: 2px;
+  animation: __drain 10s linear forwards;
+}}
+.__tour-foot {{
+  display: flex; justify-content: space-between; align-items: center;
+}}
+.__tour-counter {{ font-size: 0.72rem; color: #475569; }}
+.__tour-arrow {{
+  display: inline-block;
+  font-size: 1.4rem; margin-right: 4px;
+  vertical-align: middle; color: #2563eb;
+}}
 </style>
 
-<div class="overlay"></div>
-<div class="tour-beacon"></div>
-
-<div class="tour-card">
-  <div class="tour-step-label">Step {step_num} of {total}</div>
-  <div class="tour-title">{title}</div>
-  <div class="tour-desc">{description}</div>
-  <div class="tour-progress-bg"><div class="tour-progress-fill"></div></div>
-  <div class="timer-bar-bg"><div class="timer-bar-fill"></div></div>
-  <div class="tour-actions">
-    <span class="tour-counter">{pct}% complete</span>
-    <div class="tour-buttons">
-      <button class="btn btn-skip" onclick="window.parent.postMessage({{type:'tour',action:'skip'}}, '*')">✕ Exit Tour</button>
-      <button class="btn {next_cls}" onclick="window.parent.postMessage({{type:'tour',action:'next'}}, '*')">{next_label}</button>
-    </div>
+<div class="__tour-wrap">
+  <div class="__tour-label">
+    <span class="__tour-beacon"></span>
+    🎬 &nbsp;DEMO WALKTHROUGH &nbsp;·&nbsp; Step {step_num} of {total}
+  </div>
+  <div class="__tour-title"><span class="__tour-arrow">&#8594;</span> {title}</div>
+  <div class="__tour-desc">{description}</div>
+  <div class="__tour-prog-bg"><div class="__tour-prog-fill"></div></div>
+  <div class="__tour-timer-bg"><div class="__tour-timer-fill"></div></div>
+  <div class="__tour-foot">
+    <span class="__tour-counter">{pct}% complete &nbsp;·&nbsp; auto-advancing in 10s</span>
   </div>
 </div>
 """.format(
-        pct=pct,
-        step_num=step + 1,
-        total=total,
-        title=title,
-        description=description,
-        duration=10,
-        next_cls="btn-finish" if is_last else "btn-next",
-        next_label="Finish Tour" if is_last else "Next →",
+            bar_w=bar_w,
+            step_num=step + 1,
+            total=total,
+            title=title,
+            description=description,
+            pct=pct,
+        ),
+        unsafe_allow_html=True,
     )
-
-    components.html(html, height=0, scrolling=False)
 
 
 if st.session_state.demo_walk:
