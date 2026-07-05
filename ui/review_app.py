@@ -1310,7 +1310,7 @@ def _render_guided_tour(step: int) -> None:
         total=total,
         title=title,
         description=description,
-        duration=18,
+        duration=10,
         next_cls="btn-finish" if is_last else "btn-next",
         next_label="Finish Tour" if is_last else "Next →",
     )
@@ -1342,13 +1342,13 @@ if st.session_state.demo_walk:
         st.session_state._nav_page = _nav
 
         # auto-advance every 18 s
-        if _elapsed >= 18:
+        if _elapsed >= 10:
             st.session_state.demo_step    = _step + 1
             st.session_state.demo_step_ts = time.time()
             time.sleep(0.05)
             st.rerun()
         else:
-            time.sleep(min(1.0, 18 - _elapsed))
+            time.sleep(min(1.0, 10 - _elapsed))
             st.rerun()
     else:
         st.session_state.demo_walk = False
