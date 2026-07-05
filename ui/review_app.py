@@ -614,6 +614,14 @@ if "open_expanded_id" not in st.session_state:
 if "demo_mode" not in st.session_state:
     st.session_state.demo_mode = False
 
+# walkthrough state
+if "demo_walk" not in st.session_state:
+    st.session_state.demo_walk = False   # True while auto-play is running
+if "demo_step" not in st.session_state:
+    st.session_state.demo_step = 0
+if "demo_step_ts" not in st.session_state:
+    st.session_state.demo_step_ts = 0.0
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Demo Mode — pre-filled state for screen recordings / walkthroughs
@@ -828,11 +836,22 @@ with st.sidebar:
     _demo_help  = "Exit demo and reset to empty inbox" if _demo_on else "Load pre-triaged demo data instantly"
     if st.button(_demo_label, use_container_width=True, key="demo_toggle", help=_demo_help):
         if not _demo_on:
-            st.session_state.demo_mode = True
-            st.session_state._nav_page = "📊  Dashboard"
-            _load_demo_state()
+            st.session_state.demo_mode    = True
+            st.session_state.demo_walk    = True
+            st.session_state.demo_step    = 0
+            st.session_state.demo_step_ts = time.time()
+            st.session_state._nav_page    = "📥  Inbox"
+            # reset to empty inbox so walkthrough can show triage happening
+            from intake.channels import generate_background_volume
+            st.session_state.inbox     = generate_background_volume(15)
+            st.session_state.processed = []
+            st.session_state.resolved  = []
+            st.session_state.log       = ""
+            st.session_state.auto_triage_last_fired = 0
         else:
             st.session_state.demo_mode = False
+            st.session_state.demo_walk = False
+            st.session_state.demo_step = 0
             st.session_state._nav_page = "📥  Inbox"
             from intake.channels import generate_background_volume
             st.session_state.inbox                  = generate_background_volume(15)
@@ -987,6 +1006,78 @@ with st.sidebar:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# WALKTHROUGH ENGINE — advances automatically when demo_walk=True
+# Steps and durations (seconds):
+#   0  Inbox: 15 waiting tickets visible                    20 s
+#   1  Inbox: "running triage…" banner                      18 s
+#   2  Inbox: triage done, tickets classified               15 s
+#   3  Dashboard: KPIs, charts, outage radar                30 s
+#   4  Dashboard: scroll / stay to read                     25 s
+#   5  Review Queue: escalated tickets shown                25 s
+#   6  Review Queue: human-review tickets shown             25 s
+#   7  Open Tickets: browse open tickets                    20 s
+#   8  Open Tickets: mark one resolved                      15 s
+#   9  Dashboard: final state with resolved count           20 s
+#  10  Done — stop auto-play, show "Walkthrough complete"   —
+# ══════════════════════════════════════════════════════════════════════════════
+
+_WALK_STEPS = [
+    # (duration_s, nav_page,              action_key)
+    (20, "📥  Inbox",        "show_inbox"),
+    (18, "📥  Inbox",        "triage_banner"),
+    (15, "📥  Inbox",        "triage_done"),
+    (30, "📊  Dashboard",    "dashboard_1"),
+    (25, "📊  Dashboard",    "dashboard_2"),
+    (25, "🧑‍💻  Review Queue", "review_escalated"),
+    (25, "🧑‍💻  Review Queue", "review_hitl"),
+    (20, "📥  Inbox",        "open_tickets"),
+    (15, "📥  Inbox",        "resolve_ticket"),
+    (20, "📊  Dashboard",    "dashboard_final"),
+]
+
+if st.session_state.demo_walk:
+    _step    = st.session_state.demo_step
+    _step_ts = st.session_state.demo_step_ts
+    _elapsed = time.time() - _step_ts
+
+    if _step < len(_WALK_STEPS):
+        _dur, _nav, _action = _WALK_STEPS[_step]
+
+        # ── execute side-effects for this step (only once, on entry) ──────────
+        if _elapsed < 0.5:   # "on entry" window
+            if _action == "triage_done":
+                _load_demo_state()
+            elif _action == "resolve_ticket":
+                # mark the first open ticket resolved
+                if st.session_state.processed:
+                    _rt, _rr = st.session_state.processed[0]
+                    _rt.resolved = True
+                    _rt.status   = "resolved"
+                    st.session_state.resolved.append((_rt, _rr))
+                    st.session_state.processed.pop(0)
+
+        # ── navigate ──────────────────────────────────────────────────────────
+        st.session_state._nav_page = _nav
+
+        # ── advance when duration expires ─────────────────────────────────────
+        if _elapsed >= _dur:
+            st.session_state.demo_step    = _step + 1
+            st.session_state.demo_step_ts = time.time()
+            time.sleep(0.1)
+            st.rerun()
+        else:
+            # schedule next rerun after remaining time
+            time.sleep(min(1.0, _dur - _elapsed))
+            st.rerun()
+    else:
+        # walkthrough finished
+        st.session_state.demo_walk = False
+        st.session_state.demo_step = 0
+        st.session_state._nav_page = "📊  Dashboard"
+        st.rerun()
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # Top header bar
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -1017,6 +1108,53 @@ st.markdown(
 
 # ── strip leading spaces from radio labels for page matching ──────────────────
 page = page.strip()
+
+# ── Walkthrough progress bar & step narration ─────────────────────────────────
+if st.session_state.demo_walk:
+    _ws  = st.session_state.demo_step
+    _total_steps = len(_WALK_STEPS)
+    _pct = int(_ws / _total_steps * 100)
+    _narrations = [
+        "📥  Inbox — 15 support tickets waiting in the queue",
+        "⚙️  Running AI Triage — classifying, scoring and routing all tickets…",
+        "✅  Triage complete — all tickets classified, prioritised and routed",
+        "📊  Dashboard — KPIs, SLA analytics and outage radar",
+        "📊  Dashboard — category breakdown, channel mix, automation rate",
+        "🚨  Review Queue — escalated critical tickets",
+        "🧑‍💻  Review Queue — human-review tickets with AI draft replies",
+        "📂  Open Tickets — browsing triaged queue",
+        "✔️  Resolving a ticket — marking as done",
+        "📊  Final Dashboard — updated with resolved count",
+    ]
+    _narration = _narrations[_ws] if _ws < len(_narrations) else ""
+    st.markdown(
+        "<div style='background:#0d1526;border:1px solid #1e3a6e;border-radius:8px;"
+        "padding:0.6rem 1rem;margin-bottom:1rem'>"
+        "<div style='display:flex;justify-content:space-between;align-items:center;"
+        "margin-bottom:0.35rem'>"
+        "<span style='color:#60a5fa;font-size:0.78rem;font-weight:700'>"
+        "🎬 DEMO WALKTHROUGH &nbsp;·&nbsp; Step {s}/{t}</span>"
+        "<span style='color:#475569;font-size:0.72rem'>{narr}</span>"
+        "</div>"
+        "<div style='background:#1e2d45;border-radius:4px;height:5px;overflow:hidden'>"
+        "<div style='background:#2563eb;height:5px;width:{pct}%;border-radius:4px;"
+        "transition:width 0.5s'></div>"
+        "</div>"
+        "</div>".format(s=_ws + 1, t=_total_steps, narr=_narration, pct=_pct),
+        unsafe_allow_html=True,
+    )
+
+# ── Triage-running banner (walkthrough step 1) ────────────────────────────────
+if st.session_state.demo_walk and st.session_state.demo_step == 1:
+    st.markdown(
+        "<div style='background:#0d1f0d;border:1px solid #166534;border-radius:8px;"
+        "padding:0.75rem 1rem;margin-bottom:1rem;display:flex;align-items:center;gap:0.6rem'>"
+        "<span style='font-size:1rem'>⚙️</span>"
+        "<span style='color:#4ade80;font-weight:700;font-size:0.85rem'>"
+        "AI Triage running — classifying all 15 tickets with IBM Granite 4.1…</span>"
+        "</div>",
+        unsafe_allow_html=True,
+    )
 
 # ══════════════════════════════════════════════════════════════════════════════
 # AUTO-TRIAGE ENGINE  — fires automatically when inbox >= threshold
