@@ -1324,10 +1324,46 @@ if _at_enabled and _inbox_len >= _at_threshold and _inbox_len != _last_fired:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# PAGE: ⚙️  Settings
+# PAGE: ⚙️  Settings  (password-gated)
 # ══════════════════════════════════════════════════════════════════════════════
 
 if page == "⚙️  Settings":
+
+    # ── password gate ─────────────────────────────────────────────────────────
+    if "settings_unlocked" not in st.session_state:
+        st.session_state.settings_unlocked = False
+
+    _correct = st.secrets.get("SETTINGS_PASSWORD", "admin")
+
+    if not st.session_state.settings_unlocked:
+        st.markdown(
+            "<div style='max-width:380px;margin:3rem auto;background:#0d1526;"
+            "border:1px solid #1e3a6e;border-top:3px solid #2563eb;"
+            "border-radius:12px;padding:2rem'>"
+            "<div style='font-size:1.1rem;font-weight:700;color:#f1f5f9;"
+            "margin-bottom:0.3rem'>&#128274; Settings</div>"
+            "<div style='font-size:0.8rem;color:#475569;margin-bottom:1.2rem'>"
+            "Enter the admin password to access channel credentials.</div>"
+            "</div>",
+            unsafe_allow_html=True,
+        )
+        _pwd = st.text_input("Password", type="password", key="settings_pwd_input",
+                             label_visibility="collapsed",
+                             placeholder="Enter admin password…")
+        if st.button("Unlock", key="settings_unlock_btn", type="primary"):
+            if _pwd == _correct:
+                st.session_state.settings_unlocked = True
+                st.rerun()
+            else:
+                st.error("Incorrect password.")
+        st.stop()
+
+    # ── unlocked — show lock/logout button ────────────────────────────────────
+    _lock_col, _ = st.columns([1, 4])
+    if _lock_col.button("🔒 Lock Settings", key="settings_lock_btn"):
+        st.session_state.settings_unlocked = False
+        st.rerun()
+
     st.markdown(
         "<h2 style='margin-bottom:0.2rem'>Channel Configuration</h2>"
         "<p style='color:#475569;font-size:0.8rem;margin-bottom:1.4rem'>"
