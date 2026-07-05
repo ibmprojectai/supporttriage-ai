@@ -814,7 +814,11 @@ with st.sidebar:
         "Navigation",
         ["📥  Inbox", "📊  Dashboard", "🧑‍💻  Review Queue", "⚙️  Settings"],
         label_visibility="collapsed",
+        index=["📥  Inbox", "📊  Dashboard", "🧑‍💻  Review Queue", "⚙️  Settings"].index(
+            st.session_state.get("_nav_page", "📥  Inbox")
+        ),
     )
+    st.session_state._nav_page = page
 
     st.markdown("<div style='height:0.4rem'></div>", unsafe_allow_html=True)
 
@@ -825,9 +829,11 @@ with st.sidebar:
     if st.button(_demo_label, use_container_width=True, key="demo_toggle", help=_demo_help):
         if not _demo_on:
             st.session_state.demo_mode = True
+            st.session_state._nav_page = "📊  Dashboard"
             _load_demo_state()
         else:
             st.session_state.demo_mode = False
+            st.session_state._nav_page = "📥  Inbox"
             from intake.channels import generate_background_volume
             st.session_state.inbox                  = generate_background_volume(15)
             st.session_state.processed              = []
@@ -1369,7 +1375,10 @@ if page == "📥  Inbox":
     # ── TAB 2: Open Tickets ───────────────────────────────────────────────────
     with tab_open:
         if not _open:
-            st.info("No open tickets. Run AI Triage to process the waiting inbox.")
+            if st.session_state.get("demo_mode"):
+                st.info("No open tickets in demo mode.")
+            else:
+                st.info("No open tickets. Run AI Triage to process the waiting inbox.")
         else:
             ws_left, ws_right = st.columns([3, 1])
 
