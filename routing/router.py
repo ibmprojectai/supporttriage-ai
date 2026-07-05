@@ -44,6 +44,14 @@ _PRIORITY_WEIGHT: dict[str, int] = {
     "low":      1,
 }
 
+# Priority → priority_score 1–5 (business scale shown in UI)
+_PRIORITY_SCORE: dict[str, int] = {
+    "critical": 5,
+    "high":     4,
+    "medium":   3,
+    "low":      2,
+}
+
 # Error code prefixes treated as critical for severity scoring
 _CRITICAL_ERROR_PREFIXES = ("500", "ERR-5", "ERR-9")
 
@@ -79,6 +87,13 @@ def route(ticket: Ticket) -> dict:
     priority = (ticket.priority or "medium").lower()
     conf     = ticket.classify_confidence
 
+    sev   = _severity_impact(ticket)
+    pscore = _PRIORITY_SCORE.get(priority, 3)
+    # bump score by 1 (max 5) when severity is high due to critical error codes
+    if sev >= 8 and pscore < 5:
+        pscore += 1
+    ticket.priority_score = pscore
+
     # ── 1. Escalation: critical priority or data-loss category (only when confident) ──
     if (priority == "critical" or category == "data-loss") and conf >= AUTO_ROUTE_THRESHOLD:
         ticket.requires_human_review = False
@@ -89,14 +104,15 @@ def route(ticket: Ticket) -> dict:
         tags.append("escalated")
         print(
             f"[router] ESCALATED — {ticket.id} "
-            f"(priority={priority}, category={category})"
+            f"(priority={priority}, category={category}, score={pscore})"
         )
         return {
             "queue":                queue,
             "tags":                 tags,
             "escalate":             True,
             "requires_human_review": False,
-            "severity_impact":      _severity_impact(ticket),
+            "severity_impact":      sev,
+            "priority_score":       pscore,
             "status":               "escalated",
         }
 
@@ -106,14 +122,15 @@ def route(ticket: Ticket) -> dict:
         ticket.status = "human-review"
         print(
             f"[router] HUMAN-REVIEW — {ticket.id} "
-            f"(confidence={conf:.2f} <= {AUTO_ROUTE_THRESHOLD})"
+            f"(confidence={conf:.2f} <= {AUTO_ROUTE_THRESHOLD}, score={pscore})"
         )
         return {
             "queue":                "human-review",
             "tags":                 ["low-confidence", "needs-human"],
             "escalate":             False,
             "requires_human_review": True,
-            "severity_impact":      _severity_impact(ticket),
+            "severity_impact":      sev,
+            "priority_score":       pscore,
             "status":               "human-review",
         }
 
@@ -125,13 +142,14 @@ def route(ticket: Ticket) -> dict:
     tags.append(f"priority-{priority}")
     print(
         f"[router] AUTO-ROUTED — {ticket.id} "
-        f"(confidence={conf:.2f}, queue={queue})"
+        f"(confidence={conf:.2f}, queue={queue}, score={pscore})"
     )
     return {
         "queue":                queue,
         "tags":                 tags,
         "escalate":             False,
         "requires_human_review": False,
-        "severity_impact":      _severity_impact(ticket),
+        "severity_impact":      sev,
+        "priority_score":       pscore,
         "status":               "auto-routed",
     }

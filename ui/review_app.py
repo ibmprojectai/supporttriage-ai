@@ -196,6 +196,7 @@ hr { border: none !important; border-top: 1px solid #1e2d45 !important; margin: 
 .pill-review   { background: #431407; color: #fb923c; }
 .pill-escalated{ background: #450a0a; color: #f87171; }
 .pill-approved { background: #052e16; color: #4ade80; }
+.pill-resolved { background: #052e16; color: #4ade80; border: 1px solid #166534; }
 .pill-untriaged{ background: #1e2d45; color: #475569; }
 .pill-telegram { background: #1e3a5f; color: #93c5fd; }
 .pill-email    { background: #1e2d45; color: #a5b4fc; }
@@ -596,11 +597,15 @@ if "openrouter_key" not in st.session_state:
 
 # ── Auto-triage state ─────────────────────────────────────────────────────────
 if "auto_triage_enabled" not in st.session_state:
-    st.session_state.auto_triage_enabled = True   # ON by default
+    st.session_state.auto_triage_enabled = False  # OFF by default — agent chooses
 if "auto_triage_threshold" not in st.session_state:
     st.session_state.auto_triage_threshold = 10   # fire every 10 tickets
 if "auto_triage_last_fired" not in st.session_state:
-    st.session_state.auto_triage_last_fired = 0   # count of inbox tickets when last fired
+    st.session_state.auto_triage_last_fired = 0
+
+# resolved list — tickets explicitly marked resolved by an agent
+if "resolved" not in st.session_state:
+    st.session_state.resolved: list[tuple] = []
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -677,11 +682,15 @@ with st.sidebar:
 
     st.markdown("<hr style='margin:0'>", unsafe_allow_html=True)
 
-    # Queue summary
+    # Queue summary — honest counts only
+    _proc       = st.session_state.get("processed", [])
+    _resolved   = st.session_state.get("resolved",  [])
     inbox_count     = len(st.session_state.get("inbox", []))
-    review_count    = sum(1 for _, r in st.session_state.get("processed", []) if r.get("status") == "human-review")
-    escalated_count = sum(1 for _, r in st.session_state.get("processed", []) if r.get("status") == "escalated")
-    processed_count = len(st.session_state.get("processed", []))
+    # open = processed but NOT resolved
+    open_count      = sum(1 for t, _ in _proc if not t.resolved)
+    review_count    = sum(1 for t, r in _proc if r.get("status") == "human-review" and not t.resolved)
+    escalated_count = sum(1 for t, r in _proc if r.get("status") == "escalated"    and not t.resolved)
+    resolved_count  = len(_resolved)
 
     _rc_col = "#fb923c" if review_count else "#94a3b8"
     _ec_col = "#f87171" if escalated_count else "#94a3b8"
@@ -689,17 +698,21 @@ with st.sidebar:
     st.markdown(
         "<div style='padding:0.7rem 1rem'>"
         "<p class='sec-lbl' style='margin-bottom:0.5rem'>Queue Summary</p>"
-        "<div class='sb-row'><span style='color:#475569'>Inbox</span>"
+        "<div class='sb-row'><span style='color:#475569'>Inbox (waiting)</span>"
         "<span style='color:#f1f5f9;font-weight:700'>{inbox}</span></div>"
-        "<div class='sb-row'><span style='color:#475569'>Human Review</span>"
+        "<div class='sb-row'><span style='color:#475569'>Open (triaged)</span>"
+        "<span style='color:#60a5fa;font-weight:700'>{opn}</span></div>"
+        "<div class='sb-row'><span style='color:#475569'>Needs Review</span>"
         "<span style='color:{rc};font-weight:700'>{review}</span></div>"
         "<div class='sb-row'><span style='color:#475569'>Escalated</span>"
         "<span style='color:{ec};font-weight:700'>{esc}</span></div>"
-        "<div class='sb-row'><span style='color:#475569'>Processed</span>"
-        "<span style='color:#94a3b8;font-weight:700'>{proc}</span></div>"
+        "<div class='sb-row'><span style='color:#475569'>Resolved</span>"
+        "<span style='color:#4ade80;font-weight:700'>{res}</span></div>"
         "</div>".format(
-            inbox=inbox_count, rc=_rc_col, review=review_count,
-            ec=_ec_col, esc=escalated_count, proc=processed_count,
+            inbox=inbox_count, opn=open_count,
+            rc=_rc_col, review=review_count,
+            ec=_ec_col, esc=escalated_count,
+            res=resolved_count,
         ),
         unsafe_allow_html=True,
     )
@@ -752,10 +765,11 @@ with st.sidebar:
 
     st.markdown("<hr style='margin:0'>", unsafe_allow_html=True)
     st.markdown("<div style='padding:0.6rem 0.5rem'>", unsafe_allow_html=True)
-    if st.button("↺  Reset Inbox", use_container_width=True, key="reset_all"):
+    if st.button("↺  Reset All", use_container_width=True, key="reset_all"):
         from intake.channels import generate_background_volume
         st.session_state.inbox                  = generate_background_volume(15)
         st.session_state.processed              = []
+        st.session_state.resolved               = []
         st.session_state.log                    = ""
         st.session_state.tg_last_id             = 0
         st.session_state.auto_triage_last_fired = 0
@@ -962,497 +976,443 @@ if page == "⚙️  Settings":
 
 if page == "📥  Inbox":
 
-    # ── Auto-triage status banner ─────────────────────────────────────────────
-    _at_on   = st.session_state.auto_triage_enabled
-    _at_thr  = st.session_state.auto_triage_threshold
-    _icount  = len(st.session_state.get("inbox", []))
-    _pct_full = min(100, int(_icount / _at_thr * 100)) if _at_thr else 0
-    _bc       = "#4ade80" if _pct_full < 70 else "#fb923c" if _pct_full < 100 else "#f87171"
+    inbox     = st.session_state.inbox
+    processed = st.session_state.processed
+    resolved  = st.session_state.resolved
 
-    if _at_on:
-        st.markdown(
-            "<div class='at-banner'>"
-            "<div>"
-            "<div style='display:flex;align-items:center;gap:0.6rem;margin-bottom:0.25rem'>"
-            "<span class='at-badge-on'>&#9679; AUTO-TRIAGE ON</span>"
-            "<span style='color:#60a5fa;font-size:0.78rem;font-weight:600'>"
-            "Fires automatically every <b>{thr}</b> tickets</span>"
-            "</div>"
-            "<div style='display:flex;align-items:center;gap:0.75rem;margin-top:0.3rem'>"
-            "<div style='background:#1e2d45;border-radius:4px;height:6px;width:180px;overflow:hidden'>"
+    # ── Top control strip: 2 explicit buttons + fetch ─────────────────────────
+    ctl1, ctl2, ctl3, ctl4, ctl5 = st.columns([2, 2, 1, 1, 2])
+
+    # Button 1 — Run AI Triage NOW (manual, always available)
+    _inbox_has_tickets = len(inbox) > 0
+    if ctl1.button(
+        "Run AI Triage Now  ({} tickets)".format(len(inbox)),
+        type="primary",
+        use_container_width=True,
+        key="run_triage",
+        disabled=not _inbox_has_tickets,
+    ):
+        with st.spinner("IBM Granite triaging {} ticket(s)…".format(len(inbox))):
+            _results, _elapsed = _run_triage_pipeline(list(inbox))
+        for _tr, _ro in _results:
+            st.session_state.processed.append((_tr, _ro))
+        _n = len(_results)
+        st.session_state.inbox = []
+        st.session_state.log += "[MANUAL] {} tickets in {:.2f}s\n".format(_n, _elapsed)
+        for _tr, _ro in _results:
+            st.session_state.log += "  {} → {} | score={} | {}\n".format(
+                _tr.id, _ro["queue"], _tr.priority_score, _ro["status"])
+        st.session_state["_auto_fired_count"]   = _n
+        st.session_state["_auto_fired_elapsed"] = _elapsed
+        st.rerun()
+
+    # Button 2 — Enable / disable auto-triage
+    _at_on  = st.session_state.auto_triage_enabled
+    _at_thr = st.session_state.auto_triage_threshold
+    _at_lbl = "Auto-Triage ON (every {})".format(_at_thr) if _at_on else "Auto-Triage OFF"
+    _at_typ = "secondary"
+    if ctl2.button(_at_lbl, use_container_width=True, key="at_toggle_btn", type=_at_typ):
+        st.session_state.auto_triage_enabled = not _at_on
+        st.rerun()
+
+    if ctl3.button("✈ Telegram", key="tg_fetch", use_container_width=True):
+        tg_tok = st.session_state.get("tg_token", "")
+        if not tg_tok:
+            st.warning("No Telegram token. Configure in Settings.")
+        else:
+            from intake.channels import fetch_telegram_updates
+            with st.spinner("Polling…"):
+                _new, _lid = fetch_telegram_updates(tg_tok, st.session_state.tg_last_id)
+            if _new:
+                st.session_state.inbox.extend(_new)
+                st.session_state.tg_last_id = _lid
+                st.rerun()
+
+    if ctl4.button("✉ Gmail", key="gm_fetch", use_container_width=True):
+        gm_user = st.session_state.get("gmail_user", "")
+        gm_pass = st.session_state.get("gmail_pass", "")
+        if not gm_user or not gm_pass:
+            st.warning("No Gmail credentials. Configure in Settings.")
+        else:
+            from intake.channels import fetch_unread_emails
+            with st.spinner("Reading IMAP…"):
+                _new = fetch_unread_emails(gm_user, gm_pass)
+            if _new:
+                st.session_state.inbox.extend(_new)
+                st.rerun()
+
+    # auto-triage fill bar
+    if _at_on and _at_thr > 0:
+        _pct_q = min(100, int(len(inbox) / _at_thr * 100))
+        _bc_q  = "#4ade80" if _pct_q < 70 else "#fb923c" if _pct_q < 100 else "#f87171"
+        ctl5.markdown(
+            "<div style='padding-top:0.4rem'>"
+            "<div style='background:#1e2d45;border-radius:4px;height:6px;overflow:hidden'>"
             "<div style='background:{bc};height:6px;width:{pct}%;border-radius:4px'></div>"
             "</div>"
-            "<span style='color:{bc};font-size:0.72rem;font-weight:700'>"
-            "{cur} / {thr} &nbsp;·&nbsp; "
-            "{msg}</span>"
-            "</div>"
-            "</div>"
-            "<div style='color:#334155;font-size:0.72rem;text-align:right'>"
-            "Change threshold in sidebar &rarr;</div>"
+            "<small style='color:{bc};font-size:0.65rem;font-weight:600'>"
+            "{cur}/{thr} · {msg}</small>"
             "</div>".format(
-                thr=_at_thr, bc=_bc, pct=_pct_full, cur=_icount,
-                msg="READY — will fire on next render" if _pct_full >= 100
-                    else "{} more tickets to trigger".format(_at_thr - _icount),
+                bc=_bc_q, pct=_pct_q, cur=len(inbox), thr=_at_thr,
+                msg="WILL FIRE" if _pct_q >= 100 else "{} more".format(_at_thr - len(inbox)),
             ),
             unsafe_allow_html=True,
         )
-    else:
-        st.markdown(
-            "<div class='at-banner-off'>"
-            "<div style='display:flex;align-items:center;gap:0.6rem'>"
-            "<span class='at-badge-off'>AUTO-TRIAGE OFF</span>"
-            "<span style='color:#475569;font-size:0.78rem'>"
-            "Enable in sidebar to automatically route tickets when queue hits threshold.</span>"
-            "</div>"
-            "</div>",
-            unsafe_allow_html=True,
-        )
 
-    # ── Show "auto-triage just fired" confirmation ────────────────────────────
+    # ── Show triage-complete confirmation ──────────────────────────────────────
     if st.session_state.get("_auto_fired_count"):
         _afc = st.session_state.pop("_auto_fired_count")
         _afe = st.session_state.pop("_auto_fired_elapsed", 0)
         st.markdown(
             "<div class='at-fired'>"
-            "<div style='display:flex;align-items:center;gap:0.6rem;margin-bottom:0.2rem'>"
-            "<span style='color:#4ade80;font-size:0.9rem;font-weight:800'>&#10003; Auto-Triage Complete</span>"
-            "<span style='color:#334155;font-size:0.72rem'>{:.2f}s</span>"
-            "</div>"
-            "<span style='color:#94a3b8;font-size:0.8rem'>"
-            "<b>{}</b> tickets triaged, classified, and routed by IBM Granite. "
-            "Results available in <b>Review Queue</b> and <b>Dashboard</b>.</span>"
+            "<span style='color:#4ade80;font-size:0.9rem;font-weight:800'>&#10003; Triage complete</span>"
+            "<span style='color:#334155;font-size:0.76rem'> &nbsp;·&nbsp; {:.2f}s &nbsp;·&nbsp; "
+            "<b>{}</b> tickets classified, scored, and routed</span>"
             "</div>".format(_afe, _afc),
             unsafe_allow_html=True,
         )
 
-    # ── Fetch row ─────────────────────────────────────────────────────────────
-    fetch_col_tg, fetch_col_gm, spacer = st.columns([1, 1, 4])
+    st.markdown("<hr style='margin:0.5rem 0 0.75rem'>", unsafe_allow_html=True)
 
-    if fetch_col_tg.button("✈  Fetch Telegram", key="tg_fetch", use_container_width=True):
-        tg_tok = st.session_state.get("tg_token", "")
-        if not tg_tok:
-            st.warning("No Telegram token. Go to Settings to configure it.")
-        else:
-            from intake.channels import fetch_telegram_updates
-            with st.spinner("Polling Telegram…"):
-                new_tickets, new_last_id = fetch_telegram_updates(
-                    tg_tok, st.session_state.tg_last_id)
-            if new_tickets:
-                st.session_state.inbox.extend(new_tickets)
-                st.session_state.tg_last_id = new_last_id
-                st.success("{} new message(s) added.".format(len(new_tickets)))
-                st.rerun()
-            else:
-                st.info("No new Telegram messages.")
+    # ══════════════════════════════════════════════════════════════════════════
+    # TAB 1 — WAITING INBOX (not yet triaged)
+    # TAB 2 — OPEN TICKETS (triaged, not resolved)
+    # TAB 3 — RESOLVED
+    # ══════════════════════════════════════════════════════════════════════════
 
-    if fetch_col_gm.button("✉  Fetch Gmail", key="gm_fetch", use_container_width=True):
-        gm_user = st.session_state.get("gmail_user", "")
-        gm_pass = st.session_state.get("gmail_pass", "")
-        if not gm_user or not gm_pass:
-            st.warning("No Gmail credentials. Go to Settings to configure them.")
-        else:
-            from intake.channels import fetch_unread_emails
-            with st.spinner("Reading Gmail IMAP…"):
-                new_emails = fetch_unread_emails(gm_user, gm_pass)
-            if new_emails:
-                st.session_state.inbox.extend(new_emails)
-                st.success("{} unread email(s) added.".format(len(new_emails)))
-                st.rerun()
-            else:
-                st.info("No unread [SUPPORT-TICKET] emails found.")
+    _open      = [(i, t, r) for i, (t, r) in enumerate(processed) if not t.resolved]
+    _resolved  = resolved   # already a list[tuple(t,r)]
+    _n_wait    = len(inbox)
+    _n_open    = len(_open)
+    _n_res     = len(_resolved)
 
-    inbox = st.session_state.inbox
+    tab_wait, tab_open, tab_res = st.tabs([
+        "Waiting Inbox ({})".format(_n_wait),
+        "Open Tickets ({})".format(_n_open),
+        "Resolved ({})".format(_n_res),
+    ])
 
-    # ── Triage results workspace (shown when inbox is empty after auto-triage) ─
-    processed = st.session_state.processed
-    if not inbox and processed:
-        # Split view: recent results on the left, quick stats on the right
-        st.markdown(
-            "<div style='display:flex;align-items:baseline;gap:0.7rem;margin-bottom:0.75rem'>"
-            "<h3 style='margin:0;font-size:1.1rem'>Unified Workspace</h3>"
-            "<span style='color:#334155;font-size:0.82rem'>"
-            "— all {} triaged tickets in full context</span>"
-            "</div>".format(len(processed)),
-            unsafe_allow_html=True,
-        )
-
-        ws_left, ws_right = st.columns([3, 1])
-
-        with ws_right:
-            # Quick stats panel
-            _auto_c  = sum(1 for _, r in processed if r.get("status") == "auto-routed")
-            _hitl_c  = sum(1 for _, r in processed if r.get("status") == "human-review")
-            _esc_c   = sum(1 for _, r in processed if r.get("status") == "escalated")
-            _app_c   = sum(1 for _, r in processed if r.get("status") == "approved")
-            _avg_c   = sum(t.classify_confidence for t, _ in processed) / len(processed)
+    # ── TAB 1: Waiting Inbox ──────────────────────────────────────────────────
+    with tab_wait:
+        if not inbox:
             st.markdown(
-                "<div class='intel-panel' style='margin-bottom:0.6rem'>"
-                "<p class='sec-lbl' style='margin-bottom:0.5rem'>Routing Summary</p>"
-                "<div class='dp-row'><span class='dp-key'>Auto-routed</span>"
-                "<span class='dp-val' style='color:#4ade80'>{}</span></div>"
-                "<div class='dp-row'><span class='dp-key'>Human review</span>"
-                "<span class='dp-val' style='color:#fb923c'>{}</span></div>"
-                "<div class='dp-row'><span class='dp-key'>Escalated</span>"
-                "<span class='dp-val' style='color:#f87171'>{}</span></div>"
-                "<div class='dp-row'><span class='dp-key'>Approved</span>"
-                "<span class='dp-val' style='color:#4ade80'>{}</span></div>"
-                "<div class='dp-row'><span class='dp-key'>Avg confidence</span>"
-                "<span class='dp-val'>{:.0%}</span></div>"
-                "</div>".format(_auto_c, _hitl_c, _esc_c, _app_c, _avg_c),
+                "<div style='text-align:center;padding:3rem 2rem'>"
+                "<div style='font-size:2rem;opacity:0.25'>&#128236;</div>"
+                "<h4 style='color:#334155;margin:0.5rem 0 0.2rem'>No tickets waiting</h4>"
+                "<p style='color:#334155;font-size:0.82rem'>All incoming tickets have been triaged."
+                " Add new tickets via Telegram, Gmail, or the web form.</p>"
+                "</div>",
                 unsafe_allow_html=True,
             )
-            if _hitl_c:
+        else:
+            sf_col1, sf_col2, sf_col3 = st.columns([3, 1, 1])
+            search_q   = sf_col1.text_input("", placeholder="Search by subject, sender…",
+                                            label_visibility="collapsed", key="inbox_search")
+            pri_filter = sf_col2.selectbox("Priority", ["All", "Critical", "High", "Medium", "Low"],
+                                           label_visibility="collapsed", key="inbox_pri")
+            ch_filter  = sf_col3.selectbox("Channel", ["All", "Email", "Telegram", "Web"],
+                                           label_visibility="collapsed", key="inbox_ch")
+
+            visible = inbox
+            if search_q:
+                _q = search_q.lower()
+                visible = [t for t in visible if _q in (t.subject or "").lower()
+                           or _q in (t.sender or "").lower()
+                           or any(_q in e.lower() for e in t.error_codes)]
+            if pri_filter != "All":
+                visible = [t for t in visible if (t.priority or "").lower() == pri_filter.lower()]
+            if ch_filter != "All":
+                visible = [t for t in visible if (t.channel or "").lower() == ch_filter.lower()]
+
+            for t in visible:
+                pri   = (t.priority or "medium").lower()
+                ch    = (t.channel  or "web").lower()
+                body_flat = (t.body or "").replace("\r\n", " ").replace("\n", " ")
+                prev_safe = _html.escape((body_flat[:115] + "…") if len(body_flat) > 115 else body_flat)
                 st.markdown(
-                    "<div style='background:#1a1000;border:1px solid #78350f55;"
-                    "border-top:2px solid #fb923c;border-radius:8px;padding:0.65rem 0.8rem;"
-                    "margin-bottom:0.5rem'>"
-                    "<div style='color:#fb923c;font-size:0.75rem;font-weight:700;margin-bottom:3px'>"
-                    "{} ticket(s) need review</div>"
-                    "<div style='color:#94a3b8;font-size:0.74rem'>"
-                    "Go to <b>Review Queue</b> to approve and route.</div>"
-                    "</div>".format(_hitl_c),
+                    "<div class='tkt-row tkt-row-{pri}'>"
+                    "<div style='flex:1;min-width:0'>"
+                    "<div style='display:flex;align-items:center;gap:0.4rem;margin-bottom:0.15rem;flex-wrap:wrap'>"
+                    "<span style='color:#1e3a6e;font-size:0.68rem;font-family:monospace'>{tid}</span>"
+                    "<span style='color:{chcol};font-size:0.68rem;font-weight:700'>{chan}</span>"
+                    "<span style='color:#475569;font-size:0.68rem'>{sender}</span>"
+                    "{sla}"
+                    "</div>"
+                    "<div style='color:#e2e8f0;font-weight:600;font-size:0.87rem;margin-bottom:0.1rem;"
+                    "white-space:nowrap;overflow:hidden;text-overflow:ellipsis'>{subj}</div>"
+                    "<div style='color:#475569;font-size:0.75rem'>{prev}</div>"
+                    "</div>"
+                    "<span class='pill pill-untriaged'>WAITING</span>"
+                    "</div>".format(
+                        pri=pri, tid=_html.escape(t.id), chan=ch.upper(),
+                        chcol=_CHANNEL_COLOR.get(ch, "#475569"),
+                        sender=_html.escape(t.sender or ""),
+                        sla=_sla_badge(t.priority),
+                        subj=_html.escape(t.subject or ""),
+                        prev=prev_safe,
+                    ),
                     unsafe_allow_html=True,
                 )
 
-        with ws_left:
-            # Search + filter
-            sf1, sf2, sf3 = st.columns([3, 1, 1])
-            ws_search = sf1.text_input("", placeholder="Search triaged tickets…",
-                                       label_visibility="collapsed", key="ws_search")
-            ws_status = sf2.selectbox(
-                "Status", ["All", "Auto-routed", "Human Review", "Escalated", "Approved"],
-                label_visibility="collapsed", key="ws_status")
-            ws_pri    = sf3.selectbox(
-                "Priority", ["All", "Critical", "High", "Medium", "Low"],
-                label_visibility="collapsed", key="ws_pri")
+    # ── TAB 2: Open Tickets ───────────────────────────────────────────────────
+    with tab_open:
+        if not _open:
+            st.info("No open tickets. Run AI Triage to process the waiting inbox.")
+        else:
+            ws_left, ws_right = st.columns([3, 1])
 
-            vis_proc = processed
-            if ws_search:
-                q = ws_search.lower()
-                vis_proc = [(t, r) for t, r in vis_proc
-                            if q in (t.subject or "").lower()
-                            or q in (t.sender  or "").lower()
-                            or q in (t.category or "").lower()
-                            or any(q in e.lower() for e in t.error_codes)]
-            if ws_status != "All":
-                _smap = {"Auto-routed": "auto-routed", "Human Review": "human-review",
-                         "Escalated": "escalated", "Approved": "approved"}
-                vis_proc = [(t, r) for t, r in vis_proc
-                            if r.get("status") == _smap.get(ws_status, "")]
-            if ws_pri != "All":
-                vis_proc = [(t, r) for t, r in vis_proc
-                            if (t.priority or "").lower() == ws_pri.lower()]
-
-            for t, r in sorted(vis_proc, key=lambda x: -x[0].classify_confidence):
-                pri      = (t.priority or "medium").lower()
-                ch       = (t.channel  or "web").lower()
-                status   = r.get("status", "unknown")
-                queue    = r.get("queue",  "unknown")
-                conf     = t.classify_confidence
-                conf_c   = "#4ade80" if conf > 0.85 else "#fb923c" if conf >= 0.6 else "#f87171"
-                stat_cls = {
-                    "auto-routed":  "pill-auto",
-                    "human-review": "pill-review",
-                    "escalated":    "pill-escalated",
-                    "approved":     "pill-approved",
-                }.get(status, "pill-untriaged")
-
-                with st.expander(
-                    "{icon}  {tid}  —  {subj}{ell}".format(
-                        icon=_CHANNEL_ICON.get(ch, "?"),
-                        tid=t.id,
-                        subj=t.subject[:68],
-                        ell="…" if len(t.subject) > 68 else "",
-                    ),
-                    expanded=False,
-                ):
-                    # Header row
+            with ws_right:
+                # Honest summary of genuinely open tickets
+                _auto_c = sum(1 for _, t, r in _open if r.get("status") == "auto-routed")
+                _hitl_c = sum(1 for _, t, r in _open if r.get("status") == "human-review")
+                _esc_c  = sum(1 for _, t, r in _open if r.get("status") == "escalated")
+                _app_c  = sum(1 for _, t, r in _open if r.get("status") == "approved")
+                st.markdown(
+                    "<div class='intel-panel'>"
+                    "<p class='sec-lbl' style='margin-bottom:0.5rem'>Open Breakdown</p>"
+                    "<div class='dp-row'><span class='dp-key'>Auto-routed</span>"
+                    "<span class='dp-val' style='color:#4ade80'>{ar}</span></div>"
+                    "<div class='dp-row'><span class='dp-key'>Needs review</span>"
+                    "<span class='dp-val' style='color:#fb923c'>{hr}</span></div>"
+                    "<div class='dp-row'><span class='dp-key'>Escalated</span>"
+                    "<span class='dp-val' style='color:#f87171'>{es}</span></div>"
+                    "<div class='dp-row'><span class='dp-key'>Approved</span>"
+                    "<span class='dp-val' style='color:#4ade80'>{ap}</span></div>"
+                    "</div>".format(ar=_auto_c, hr=_hitl_c, es=_esc_c, ap=_app_c),
+                    unsafe_allow_html=True,
+                )
+                if _hitl_c:
                     st.markdown(
-                        "<div style='display:flex;flex-wrap:wrap;gap:0.5rem;"
-                        "align-items:center;margin-bottom:0.6rem'>"
-                        "<span class='pill pill-{pri}'>{PRI}</span>"
-                        "<span class='pill {sc}'>{ST}</span>"
-                        "<span class='queue-chip'>&#8594; {queue}</span>"
-                        "<span style='color:{cc};font-size:0.78rem;font-weight:700'>"
-                        "conf {conf:.0%}</span>"
-                        "<span style='color:#475569;font-size:0.75rem;margin-left:auto'>"
-                        "{sender}</span>"
-                        "</div>".format(
-                            pri=pri, PRI=pri.upper(),
-                            sc=stat_cls, ST=status.upper().replace("-", " "),
-                            queue=queue, cc=conf_c, conf=conf,
-                            sender=_html.escape(t.sender or ""),
-                        ),
+                        "<div style='background:#1a1000;border:1px solid #78350f55;"
+                        "border-top:2px solid #fb923c;border-radius:8px;"
+                        "padding:0.6rem 0.8rem;margin-top:0.5rem'>"
+                        "<div style='color:#fb923c;font-size:0.74rem;font-weight:700'>"
+                        "{} ticket(s) need agent review</div>"
+                        "<div style='color:#94a3b8;font-size:0.72rem;margin-top:2px'>"
+                        "Go to Review Queue &rarr;</div>"
+                        "</div>".format(_hitl_c),
                         unsafe_allow_html=True,
                     )
 
-                    # Two-column workspace: AI intelligence | full context
-                    ai_col, ctx_col = st.columns([1, 1])
+            with ws_left:
+                ws_f1, ws_f2, ws_f3 = st.columns([3, 1, 1])
+                ws_search = ws_f1.text_input("", placeholder="Search open tickets…",
+                                             label_visibility="collapsed", key="ws_search")
+                ws_status = ws_f2.selectbox(
+                    "Status", ["All", "Auto-routed", "Needs Review", "Escalated", "Approved"],
+                    label_visibility="collapsed", key="ws_status")
+                ws_score  = ws_f3.selectbox(
+                    "Priority Score", ["All", "5", "4", "3", "2", "1"],
+                    label_visibility="collapsed", key="ws_score")
 
-                    with ai_col:
-                        st.markdown(
-                            "<p class='sec-lbl'>AI Intelligence</p>",
-                            unsafe_allow_html=True,
-                        )
-                        # Reasoning panel
-                        st.markdown(
-                            "<div class='data-panel'>"
-                            + _dp_row("Category",   _html.escape(t.category  or "unknown"))
-                            + _dp_row("Priority",   _html.escape(t.priority  or "unknown"))
-                            + _dp_row("Confidence", "{:.0%}".format(conf))
-                            + _dp_row("Queue",      queue)
-                            + _dp_row("SLA",        _PRIORITY_SLA.get(pri, 24).__str__() + "h")
-                            + "</div>",
-                            unsafe_allow_html=True,
-                        )
-                        st.markdown(
-                            "<div style='margin:0.4rem 0'>{}</div>".format(
-                                _conf_bar_html(conf, 160)),
-                            unsafe_allow_html=True,
-                        )
-                        if t.error_codes:
-                            codes = " ".join(
-                                "<code style='background:#0d1526;color:#60a5fa;padding:1px 5px;"
-                                "border-radius:3px;font-size:0.68rem;border:1px solid #1e3a6e'>"
-                                "{}</code>".format(_html.escape(e))
-                                for e in t.error_codes
-                            )
-                            st.markdown(
-                                "<div style='margin-top:0.4rem'>"
-                                "<span style='color:#475569;font-size:0.72rem;font-weight:600'>"
-                                "Error codes: </span>{}</div>".format(codes),
-                                unsafe_allow_html=True,
-                            )
-                        if t.symptoms:
-                            chips = " ".join(
-                                "<span style='background:#0d1526;color:#475569;padding:1px 7px;"
-                                "border-radius:10px;font-size:0.7rem;border:1px solid #1e2d45'>"
-                                "{}</span>".format(_html.escape(s))
-                                for s in t.symptoms
-                            )
-                            st.markdown(
-                                "<div style='margin-top:0.35rem'>"
-                                "<span style='color:#475569;font-size:0.72rem;font-weight:600'>"
-                                "Symptoms: </span>{}</div>".format(chips),
-                                unsafe_allow_html=True,
-                            )
-                        # AI Summary
-                        if t.summary:
-                            st.markdown(
-                                "<p class='sec-lbl' style='margin-top:0.7rem'>AI Summary</p>",
-                                unsafe_allow_html=True,
-                            )
-                            st.info(t.summary)
-                        # AI Draft Reply
-                        ai_draft = (t.draft_reply or "").strip()
-                        if ai_draft and not ai_draft.startswith("[STUB]"):
-                            st.markdown(
-                                "<p class='sec-lbl' style='margin-top:0.6rem'>AI Draft Reply</p>"
-                                "<div class='reply-preview'>"
-                                "<div class='reply-preview-lbl'>&#9671; AI-generated suggestion</div>"
-                                "{txt}"
-                                "</div>".format(
-                                    txt=_html.escape(ai_draft[:480])
-                                    + ("…" if len(ai_draft) > 480 else "")
-                                ),
-                                unsafe_allow_html=True,
-                            )
+                vis_open = _open
+                if ws_search:
+                    _q = ws_search.lower()
+                    vis_open = [(i, t, r) for i, t, r in vis_open
+                                if _q in (t.subject or "").lower()
+                                or _q in (t.sender or "").lower()
+                                or _q in (t.category or "").lower()
+                                or any(_q in e.lower() for e in t.error_codes)]
+                if ws_status != "All":
+                    _smap = {"Auto-routed": "auto-routed", "Needs Review": "human-review",
+                             "Escalated": "escalated", "Approved": "approved"}
+                    vis_open = [(i, t, r) for i, t, r in vis_open
+                                if r.get("status") == _smap.get(ws_status, "")]
+                if ws_score != "All":
+                    vis_open = [(i, t, r) for i, t, r in vis_open
+                                if t.priority_score == int(ws_score)]
 
-                    with ctx_col:
+                # Sort by priority_score desc, then confidence desc
+                vis_open = sorted(vis_open, key=lambda x: (-x[1].priority_score, -x[1].classify_confidence))
+
+                # Priority score colour
+                _SCORE_COLOR = {5: "#f87171", 4: "#fb923c", 3: "#fbbf24", 2: "#60a5fa", 1: "#94a3b8"}
+
+                for _idx, t, r in vis_open:
+                    pri    = (t.priority or "medium").lower()
+                    ch     = (t.channel  or "web").lower()
+                    status = r.get("status", "unknown")
+                    queue  = r.get("queue",  "unknown")
+                    conf   = t.classify_confidence
+                    conf_c = "#4ade80" if conf > 0.85 else "#fb923c" if conf >= 0.6 else "#f87171"
+                    ps     = t.priority_score or 0
+                    ps_col = _SCORE_COLOR.get(ps, "#94a3b8")
+                    stat_cls = {
+                        "auto-routed":  "pill-auto",
+                        "human-review": "pill-review",
+                        "escalated":    "pill-escalated",
+                        "approved":     "pill-approved",
+                    }.get(status, "pill-untriaged")
+
+                    with st.expander(
+                        "[{ps}]  {icon}  {tid}  —  {subj}{ell}".format(
+                            ps=ps,
+                            icon=_CHANNEL_ICON.get(ch, "?"),
+                            tid=t.id, subj=t.subject[:62],
+                            ell="…" if len(t.subject) > 62 else "",
+                        ),
+                        expanded=False,
+                    ):
+                        # Ticket header row
                         st.markdown(
-                            "<p class='sec-lbl'>Full Context</p>",
+                            "<div style='display:flex;flex-wrap:wrap;gap:0.5rem;"
+                            "align-items:center;margin-bottom:0.6rem'>"
+                            # Priority score badge — the big honest number
+                            "<div style='background:{psc};color:#0b1120;width:28px;height:28px;"
+                            "border-radius:6px;display:flex;align-items:center;"
+                            "justify-content:center;font-size:0.85rem;font-weight:800;"
+                            "flex-shrink:0' title='Priority score {ps}/5'>{ps}</div>"
+                            "<span class='pill pill-{pri}'>{PRI}</span>"
+                            "<span class='pill {sc}'>{ST}</span>"
+                            "<span class='queue-chip'>&#8594; {queue}</span>"
+                            "<span style='color:{cc};font-size:0.76rem;font-weight:700'>"
+                            "conf {conf:.0%}</span>"
+                            "<span style='color:#475569;font-size:0.74rem;margin-left:auto'>"
+                            "{sender}</span>"
+                            "</div>".format(
+                                psc=ps_col, ps=ps,
+                                pri=pri, PRI=pri.upper(),
+                                sc=stat_cls, ST=status.upper().replace("-", " "),
+                                queue=queue, cc=conf_c, conf=conf,
+                                sender=_html.escape(t.sender or ""),
+                            ),
                             unsafe_allow_html=True,
                         )
-                        # Original body
-                        body_safe = _html.escape((t.body or "").strip())
-                        st.markdown(
-                            "<div style='margin-bottom:0.4rem'>"
-                            "<span style='color:#334155;font-size:0.7rem;font-weight:600'>"
-                            "Original message</span>"
-                            "</div>"
-                            "<div class='ctx-msg'>{}</div>".format(body_safe),
-                            unsafe_allow_html=True,
-                        )
-                        # Thread (if any)
-                        if t.thread:
+
+                        ai_col, ctx_col = st.columns([1, 1])
+
+                        with ai_col:
+                            st.markdown("<p class='sec-lbl'>AI Intelligence</p>",
+                                        unsafe_allow_html=True)
                             st.markdown(
-                                "<div style='margin:0.4rem 0 0.25rem'>"
-                                "<span style='color:#334155;font-size:0.7rem;font-weight:600'>"
-                                "Thread ({} message(s))</span>"
-                                "</div>".format(len(t.thread)),
-                                unsafe_allow_html=True,
-                            )
-                            for msg in t.thread[:4]:
-                                st.markdown(
-                                    "<div class='ctx-msg'>{}</div>".format(
-                                        _html.escape(msg[:320])
-                                        + ("…" if len(msg) > 320 else "")
-                                    ),
-                                    unsafe_allow_html=True,
-                                )
-                        # Account / product
-                        if t.account or t.product:
-                            st.markdown(
-                                "<div class='data-panel' style='margin-top:0.5rem'>"
-                                + (_dp_row("Account", _html.escape(t.account)) if t.account else "")
-                                + (_dp_row("Product", _html.escape(t.product)) if t.product else "")
+                                "<div class='data-panel'>"
+                                + _dp_row("Category",   _html.escape(t.category or "unknown"))
+                                + _dp_row("Priority",   _html.escape(t.priority or "unknown"))
+                                + _dp_row("Score",      "{}/5".format(ps))
+                                + _dp_row("Confidence", "{:.0%}".format(conf))
+                                + _dp_row("Queue",      queue)
+                                + _dp_row("SLA",        "{}h".format(_PRIORITY_SLA.get(pri, 24)))
                                 + "</div>",
                                 unsafe_allow_html=True,
                             )
-        st.stop()
+                            st.markdown(
+                                "<div style='margin:0.4rem 0'>{}</div>".format(
+                                    _conf_bar_html(conf, 160)),
+                                unsafe_allow_html=True,
+                            )
+                            if t.error_codes:
+                                codes = " ".join(
+                                    "<code style='background:#0d1526;color:#60a5fa;"
+                                    "padding:1px 5px;border-radius:3px;font-size:0.68rem;"
+                                    "border:1px solid #1e3a6e'>{}</code>".format(_html.escape(e))
+                                    for e in t.error_codes)
+                                st.markdown(
+                                    "<div style='margin-top:0.4rem'>"
+                                    "<span style='color:#475569;font-size:0.72rem;font-weight:600'>"
+                                    "Error codes:</span> {}</div>".format(codes),
+                                    unsafe_allow_html=True)
+                            if t.summary:
+                                st.markdown("<p class='sec-lbl' style='margin-top:0.6rem'>"
+                                            "AI Summary</p>", unsafe_allow_html=True)
+                                st.info(t.summary)
+                            ai_draft = (t.draft_reply or "").strip()
+                            if ai_draft and not ai_draft.startswith("[STUB]"):
+                                st.markdown(
+                                    "<p class='sec-lbl' style='margin-top:0.5rem'>"
+                                    "AI Draft Reply</p>"
+                                    "<div class='reply-preview'>"
+                                    "<div class='reply-preview-lbl'>&#9671; AI suggestion</div>"
+                                    "{}</div>".format(
+                                        _html.escape(ai_draft[:480])
+                                        + ("…" if len(ai_draft) > 480 else "")),
+                                    unsafe_allow_html=True,
+                                )
 
-    # ── Empty inbox ────────────────────────────────────────────────────────────
-    if not inbox:
-        st.markdown(
-            "<div style='text-align:center;padding:5rem 2rem'>"
-            "<div style='font-size:2.8rem;opacity:0.3'>&#128236;</div>"
-            "<h3 style='color:#334155;margin:0.6rem 0 0.3rem;font-weight:600'>Inbox is empty</h3>"
-            "<p style='color:#334155;font-size:0.84rem'>Click <b>Reset Inbox</b> in the sidebar to "
-            "reload the demo queue, or connect a live channel above.</p>"
-            "</div>",
-            unsafe_allow_html=True,
-        )
-        st.stop()
+                        with ctx_col:
+                            st.markdown("<p class='sec-lbl'>Full Context</p>",
+                                        unsafe_allow_html=True)
+                            st.markdown(
+                                "<div style='margin-bottom:0.3rem'>"
+                                "<span style='color:#334155;font-size:0.7rem;font-weight:600'>"
+                                "Original message</span></div>"
+                                "<div class='ctx-msg'>{}</div>".format(
+                                    _html.escape((t.body or "").strip()[:600])),
+                                unsafe_allow_html=True,
+                            )
+                            if t.thread:
+                                st.markdown(
+                                    "<div style='margin:0.4rem 0 0.2rem'>"
+                                    "<span style='color:#334155;font-size:0.7rem;font-weight:600'>"
+                                    "Thread ({} msg)</span></div>".format(len(t.thread)),
+                                    unsafe_allow_html=True)
+                                for _msg in t.thread[:3]:
+                                    st.markdown(
+                                        "<div class='ctx-msg'>{}</div>".format(
+                                            _html.escape(_msg[:280])),
+                                        unsafe_allow_html=True)
+                            if t.account or t.product:
+                                st.markdown(
+                                    "<div class='data-panel' style='margin-top:0.5rem'>"
+                                    + (_dp_row("Account", _html.escape(t.account)) if t.account else "")
+                                    + (_dp_row("Product", _html.escape(t.product)) if t.product else "")
+                                    + "</div>",
+                                    unsafe_allow_html=True)
 
-    # ── Waiting queue (tickets not yet triaged) ────────────────────────────────
-    sf_col1, sf_col2, sf_col3 = st.columns([3, 1, 1])
-    search_q   = sf_col1.text_input("", placeholder="Search by subject, sender, error code…",
-                                    label_visibility="collapsed", key="inbox_search")
-    pri_filter = sf_col2.selectbox("Priority", ["All", "Critical", "High", "Medium", "Low"],
-                                   label_visibility="collapsed", key="inbox_pri")
-    ch_filter  = sf_col3.selectbox("Channel", ["All", "Email", "Telegram", "Web"],
-                                   label_visibility="collapsed", key="inbox_ch")
+                            # ── RESOLVE BUTTON ────────────────────────────────
+                            st.markdown("<div style='height:0.5rem'></div>",
+                                        unsafe_allow_html=True)
+                            if st.button(
+                                "Mark Resolved",
+                                key="resolve_{}".format(t.id),
+                                use_container_width=True,
+                            ):
+                                t.resolved = True
+                                t.status   = "resolved"
+                                _pair      = (t, r)
+                                # move to resolved list
+                                st.session_state.resolved.append(_pair)
+                                # remove from processed
+                                st.session_state.processed.pop(_idx)
+                                st.session_state.log += "  [RESOLVED] {} by agent\n".format(t.id)
+                                st.rerun()
 
-    visible = inbox
-    if search_q:
-        q = search_q.lower()
-        visible = [t for t in visible if q in (t.subject or "").lower()
-                   or q in (t.sender or "").lower()
-                   or any(q in e.lower() for e in t.error_codes)]
-    if pri_filter != "All":
-        visible = [t for t in visible if (t.priority or "").lower() == pri_filter.lower()]
-    if ch_filter != "All":
-        visible = [t for t in visible if (t.channel or "").lower() == ch_filter.lower()]
-
-    ch_counts = Counter(t.channel for t in inbox)
-    ch_pills  = "  ".join(
-        "<span style='background:{bg};color:{c};padding:2px 10px;border-radius:20px;"
-        "font-size:0.65rem;font-weight:700;letter-spacing:0.2px'>{ch} {n}</span>".format(
-            bg="#111d30", c=_CHANNEL_COLOR.get(ch, "#475569"), ch=ch.upper(), n=n,
-        )
-        for ch, n in sorted(ch_counts.items())
-    )
-
-    _needs = max(0, _at_thr - len(inbox)) if _at_on else 0
-    _pct_q = min(100, int(len(inbox) / _at_thr * 100)) if (_at_on and _at_thr) else 0
-    _bc_q  = "#4ade80" if _pct_q < 70 else "#fb923c" if _pct_q < 100 else "#f87171"
-
-    st.markdown(
-        "<div style='display:flex;justify-content:space-between;align-items:center;"
-        "margin:0.6rem 0 0.4rem'>"
-        "<div style='display:flex;align-items:baseline;gap:0.6rem'>"
-        "<h3 style='margin:0;font-size:1.1rem'>Triage Queue</h3>"
-        "<span style='color:#334155;font-size:0.82rem'>{showing} / {total} tickets</span>"
-        "{at_progress}"
-        "</div>"
-        "<div style='display:flex;gap:0.35rem'>{pills}</div>"
-        "</div>".format(
-            showing=len(visible), total=len(inbox), pills=ch_pills,
-            at_progress=(
-                "<span style='display:inline-flex;align-items:center;gap:6px;"
-                "margin-left:0.8rem'>"
-                "<div style='background:#1e2d45;border-radius:3px;height:5px;"
-                "width:80px;overflow:hidden'>"
-                "<div style='background:{bc};height:5px;width:{pct}%;border-radius:3px'>"
-                "</div></div>"
-                "<span style='color:{bc};font-size:0.68rem;font-weight:700'>"
-                "{pct}% to auto-triage</span>"
-                "</span>"
-            ).format(bc=_bc_q, pct=_pct_q) if _at_on else ""
-        ),
-        unsafe_allow_html=True,
-    )
-    st.markdown("<hr style='margin:0 0 0.6rem'>", unsafe_allow_html=True)
-
-    if not visible:
-        st.info("No tickets match your filter.")
-        st.stop()
-
-    for t in visible:
-        pri   = (t.priority or "medium").lower()
-        ch    = (t.channel  or "web").lower()
-        icon  = _CHANNEL_ICON.get(ch, "?")
-        body_flat   = (t.body or "").replace("\r\n", " ").replace("\n", " ").replace("\r", " ")
-        preview     = (body_flat[:115] + "…") if len(body_flat) > 115 else body_flat
-        id_safe     = _html.escape(t.id      or "")
-        sender_safe = _html.escape(t.sender  or "")
-        subj_safe   = _html.escape(t.subject or "")
-        prev_safe   = _html.escape(preview)
-        sla_html    = _sla_badge(t.priority)
-        errs = "  ".join(
-            "<code style='background:#0d1526;color:#60a5fa;padding:1px 5px;"
-            "border-radius:3px;font-size:0.68rem;border:1px solid #1e3a6e'>{e}</code>".format(
-                e=_html.escape(e)) for e in t.error_codes
-        ) if t.error_codes else ""
-
-        st.markdown(
-            "<div class='tkt-row tkt-row-{pri}'>"
-            "<span style='font-size:0.88rem;flex-shrink:0;padding-top:3px;"
-            "color:{chcol};opacity:0.85'>{icon}</span>"
-            "<div style='flex:1;min-width:0'>"
-            "<div style='display:flex;align-items:center;gap:0.4rem;margin-bottom:0.15rem;flex-wrap:wrap'>"
-            "<span style='color:#1e3a6e;font-size:0.68rem;font-family:monospace;font-weight:600'>"
-            "{tid}</span>"
-            "<span style='color:{chcol};font-size:0.68rem;font-weight:700'>{chan}</span>"
-            "<span style='color:#475569;font-size:0.68rem'>{sender}</span>"
-            "{sla}{errs}"
-            "</div>"
-            "<div style='color:#e2e8f0;font-weight:600;font-size:0.87rem;margin-bottom:0.12rem;"
-            "white-space:nowrap;overflow:hidden;text-overflow:ellipsis'>{subj}</div>"
-            "<div style='color:#475569;font-size:0.76rem;line-height:1.4'>{prev}</div>"
-            "</div>"
-            "<span class='pill pill-untriaged' style='flex-shrink:0;margin-top:2px'>UNTRIAGED</span>"
-            "</div>".format(
-                pri=pri, icon=icon, chcol=_CHANNEL_COLOR.get(ch, "#475569"),
-                tid=id_safe, chan=ch.upper(), sender=sender_safe,
-                sla=sla_html, errs=errs, subj=subj_safe, prev=prev_safe,
-            ),
-            unsafe_allow_html=True,
-        )
-
-    st.markdown("<div style='height:0.8rem'></div>", unsafe_allow_html=True)
-
-    triage_col, _ = st.columns([3, 1])
-    if triage_col.button(
-        "Run AI Triage on {} Ticket(s)  —  IBM Granite".format(len(inbox)),
-        type="primary", use_container_width=True, key="run_triage",
-    ):
-        n        = len(inbox)
-        progress = st.progress(0, text="Initialising IBM Granite…")
-        results, elapsed = _run_triage_pipeline(list(inbox))
-
-        new_results = []
-        for i, (t, r) in enumerate(results):
-            new_results.append((t, r))
-            progress.progress((i + 1) / n, text="Triaged {}/{}…".format(i + 1, n))
-
-        st.session_state.processed.extend(new_results)
-        st.session_state.inbox = []
-
-        log_lines = ["[IBM Granite] {} tickets in {:.2f}s (manual)\n".format(n, elapsed)]
-        for t, r in new_results:
-            log_lines.append(
-                "  [{:<9}] {:<10} → {:<22} | conf={:.2f} | status={:<12} | priority={}\n".format(
-                    t.channel.upper(), t.id, r["queue"],
-                    t.classify_confidence, r.get("status", "?"),
-                    t.priority or "unknown",
-                )
+    # ── TAB 3: Resolved ───────────────────────────────────────────────────────
+    with tab_res:
+        if not _resolved:
+            st.info("No resolved tickets yet. Mark a ticket as resolved from the Open tab.")
+        else:
+            st.markdown(
+                "<div style='margin-bottom:0.5rem'>"
+                "<span style='color:#4ade80;font-size:0.8rem;font-weight:600'>"
+                "&#10003; {} ticket(s) resolved</span>"
+                "</div>".format(len(_resolved)),
+                unsafe_allow_html=True,
             )
-        st.session_state.log += "".join(log_lines)
-        progress.empty()
-        st.session_state["_auto_fired_count"]   = n
-        st.session_state["_auto_fired_elapsed"] = elapsed
-        st.rerun()
+            for t, r in sorted(_resolved, key=lambda x: -x[0].priority_score):
+                ps     = t.priority_score or 0
+                ps_col = {5: "#f87171", 4: "#fb923c", 3: "#fbbf24",
+                          2: "#60a5fa", 1: "#94a3b8"}.get(ps, "#94a3b8")
+                st.markdown(
+                    "<div class='tkt-row' style='opacity:0.65'>"
+                    "<div style='background:{psc};color:#0b1120;width:22px;height:22px;"
+                    "border-radius:5px;display:flex;align-items:center;justify-content:center;"
+                    "font-size:0.75rem;font-weight:800;flex-shrink:0'>{ps}</div>"
+                    "<div style='flex:1;min-width:0'>"
+                    "<div style='color:#e2e8f0;font-weight:600;font-size:0.84rem;"
+                    "white-space:nowrap;overflow:hidden;text-overflow:ellipsis'>{subj}</div>"
+                    "<div style='color:#475569;font-size:0.72rem'>"
+                    "{tid} &nbsp;·&nbsp; {queue} &nbsp;·&nbsp; {pri}</div>"
+                    "</div>"
+                    "<span class='pill pill-resolved'>RESOLVED</span>"
+                    "</div>".format(
+                        psc=ps_col, ps=ps,
+                        subj=_html.escape(t.subject or ""),
+                        tid=_html.escape(t.id),
+                        queue=r.get("queue", "unknown"),
+                        pri=(t.priority or "medium").upper(),
+                    ),
+                    unsafe_allow_html=True,
+                )
 
 
 # ══════════════════════════════════════════════════════════════════════════════

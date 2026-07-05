@@ -16,7 +16,8 @@ class Ticket:
     account: str = ""
     product: str = ""
     channel: str = "web"        # "telegram", "email", or "web"
-    status: str = "untriaged"   # "untriaged", "auto-routed", "human-review", "escalated"
+    status: str = "untriaged"   # "untriaged", "auto-routed", "human-review", "escalated", "resolved"
+    resolved: bool = False       # True once agent marks ticket resolved
 
     # ── Set by pipeline/extract ────────────────────────────────────────────────
     error_codes: list[str] = field(default_factory=list)
@@ -29,6 +30,7 @@ class Ticket:
     confidence_classify: float = 1.0  # 0.0–1.0; set by classify stage
     classify_confidence: float = 0.0  # alias used by router/UI (set by classify stage)
     requires_human_review: bool = False  # set True by router when confidence is low
+    priority_score: int = 0      # 1 (lowest) – 5 (highest), set by router
 
     # ── Set by pipeline/summarize ──────────────────────────────────────────────
     summary: str = ""
