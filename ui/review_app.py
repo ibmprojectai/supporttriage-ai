@@ -633,7 +633,7 @@ with st.sidebar:
     st.markdown("<div style='height:0.6rem'></div>", unsafe_allow_html=True)
 
     page = st.radio(
-        "",
+        "Navigation",
         ["📥  Inbox", "📊  Dashboard", "🧑‍💻  Review Queue", "⚙️  Settings"],
         label_visibility="collapsed",
     )
@@ -725,16 +725,19 @@ with st.sidebar:
         "<p class='sec-lbl' style='margin-bottom:0.45rem'>Auto-Triage</p>",
         unsafe_allow_html=True,
     )
-    at_enabled = st.toggle(
-        "Auto-triage ON",
-        value=st.session_state.auto_triage_enabled,
-        key="at_toggle",
-        help="Automatically run AI triage when inbox reaches the threshold.",
+    # Status-only display — the ON/OFF toggle lives in the Inbox control strip
+    _at_status_col = "#4ade80" if st.session_state.auto_triage_enabled else "#475569"
+    _at_status_txt = "ON" if st.session_state.auto_triage_enabled else "OFF"
+    st.markdown(
+        "<div style='font-size:0.78rem;color:{c};font-weight:700;"
+        "padding:0.1rem 0 0.35rem'>Status: {s} &nbsp;"
+        "<span style='font-size:0.7rem;color:#475569;font-weight:400'>"
+        "(toggle in Inbox)</span></div>".format(c=_at_status_col, s=_at_status_txt),
+        unsafe_allow_html=True,
     )
-    st.session_state.auto_triage_enabled = at_enabled
 
     at_thresh = st.select_slider(
-        "Trigger at N tickets",
+        "Threshold",
         options=[5, 10, 15, 20, 25, 30],
         value=st.session_state.auto_triage_threshold,
         key="at_thresh",
@@ -1106,7 +1109,7 @@ if page == "📥  Inbox":
             )
         else:
             sf_col1, sf_col2, sf_col3 = st.columns([3, 1, 1])
-            search_q   = sf_col1.text_input("", placeholder="Search by subject, sender…",
+            search_q   = sf_col1.text_input("Search", placeholder="Search by subject, sender…",
                                             label_visibility="collapsed", key="inbox_search")
             pri_filter = sf_col2.selectbox("Priority", ["All", "Critical", "High", "Medium", "Low"],
                                            label_visibility="collapsed", key="inbox_pri")
@@ -1196,7 +1199,7 @@ if page == "📥  Inbox":
 
             with ws_left:
                 ws_f1, ws_f2, ws_f3 = st.columns([3, 1, 1])
-                ws_search = ws_f1.text_input("", placeholder="Search open tickets…",
+                ws_search = ws_f1.text_input("Search", placeholder="Search open tickets…",
                                              label_visibility="collapsed", key="ws_search")
                 ws_status = ws_f2.selectbox(
                     "Status", ["All", "Auto-routed", "Needs Review", "Escalated", "Approved"],
@@ -1686,7 +1689,7 @@ elif page == "📊  Dashboard":
             "Ticket arrival rate — top categories (30-min buckets)</p>",
             unsafe_allow_html=True,
         )
-        st.line_chart(fc_df, height=200, use_container_width=True)
+        st.line_chart(fc_df, height=200)
         st.markdown("</div>", unsafe_allow_html=True)
 
     with fc_col2:

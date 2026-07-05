@@ -1,4 +1,7 @@
-"""Shared Ticket data model — the single contract passed between all pipeline modules."""
+"""Shared Ticket data model — the single contract passed between all pipeline modules.
+Fields added in Task 38: resolved (bool), priority_score (int).
+Cache-bust: 2026-07-05
+"""
 
 from __future__ import annotations
 
